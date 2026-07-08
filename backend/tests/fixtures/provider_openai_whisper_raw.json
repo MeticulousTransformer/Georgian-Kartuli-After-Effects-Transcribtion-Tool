@@ -1,0 +1,13 @@
+{
+  "task": "transcribe",
+  "language": "georgian",
+  "duration": 3.1,
+  "text": "გამარჯობა როგორ ხარ? კარგად ვარ.",
+  "words": [
+    {"word": "გამარჯობა", "start": 0.1, "end": 0.5},
+    {"word": "როგორ", "start": 0.5, "end": 0.86},
+    {"word": "ხარ?", "start": 0.9, "end": 1.21},
+    {"word": "კარგად", "start": 2.0, "end": 2.41},
+    {"word": "ვარ.", "start": 2.45, "end": 2.81}
+  ]
+}

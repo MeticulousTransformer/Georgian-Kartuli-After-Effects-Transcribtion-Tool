@@ -1,0 +1,18 @@
+{
+  "id": "fixture-english-short",
+  "sourceMediaPath": "/example/english.mp4",
+  "language": "en-US",
+  "provider": "openai",
+  "duration": 2.4,
+  "words": [
+    {"id": 0, "text": "hello", "start": 0.1, "end": 0.4, "confidence": 0.99, "speaker": null, "punctuationAfter": ",", "isEdited": false},
+    {"id": 1, "text": "how", "start": 0.45, "end": 0.6, "confidence": 0.99, "speaker": null, "punctuationAfter": "", "isEdited": false},
+    {"id": 2, "text": "are", "start": 0.62, "end": 0.75, "confidence": 0.99, "speaker": null, "punctuationAfter": "", "isEdited": false},
+    {"id": 3, "text": "you", "start": 0.77, "end": 0.95, "confidence": 0.99, "speaker": null, "punctuationAfter": "?", "isEdited": false},
+    {"id": 4, "text": "great", "start": 1.8, "end": 2.1, "confidence": 0.98, "speaker": null, "punctuationAfter": ".", "isEdited": false}
+  ],
+  "captions": [
+    {"id": 0, "text": "hello, how are you?", "start": 0.1, "end": 0.95, "wordIds": [0, 1, 2, 3], "lineIndex": 0},
+    {"id": 1, "text": "great.", "start": 1.8, "end": 2.3, "wordIds": [4], "lineIndex": 0}
+  ]
+}

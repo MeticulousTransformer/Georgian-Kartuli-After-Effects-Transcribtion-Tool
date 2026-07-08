@@ -1,0 +1,18 @@
+{
+  "id": "fixture-georgian-short",
+  "sourceMediaPath": "/example/georgian.mp4",
+  "language": "ka-GE",
+  "provider": "elevenlabs",
+  "duration": 2.85,
+  "words": [
+    {"id": 0, "text": "გამარჯობა", "start": 0.12, "end": 0.48, "confidence": 0.92, "speaker": null, "punctuationAfter": "", "isEdited": false},
+    {"id": 1, "text": "როგორ", "start": 0.52, "end": 0.85, "confidence": 0.95, "speaker": null, "punctuationAfter": "", "isEdited": false},
+    {"id": 2, "text": "ხარ", "start": 0.9, "end": 1.2, "confidence": 0.93, "speaker": null, "punctuationAfter": "?", "isEdited": false},
+    {"id": 3, "text": "კარგად", "start": 2.0, "end": 2.4, "confidence": 0.97, "speaker": null, "punctuationAfter": "", "isEdited": false},
+    {"id": 4, "text": "ვარ", "start": 2.45, "end": 2.8, "confidence": 0.96, "speaker": null, "punctuationAfter": ".", "isEdited": false}
+  ],
+  "captions": [
+    {"id": 0, "text": "გამარჯობა როგორ ხარ?", "start": 0.12, "end": 1.2, "wordIds": [0, 1, 2], "lineIndex": 0},
+    {"id": 1, "text": "კარგად ვარ.", "start": 2.0, "end": 2.8, "wordIds": [3, 4], "lineIndex": 0}
+  ]
+}

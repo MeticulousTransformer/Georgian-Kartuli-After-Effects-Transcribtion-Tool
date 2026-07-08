@@ -1,0 +1,16 @@
+# Core (always required)
+fastapi>=0.110
+uvicorn>=0.29
+pydantic>=2.5
+requests>=2.31
+
+# --- Optional providers: uncomment what you need ---
+
+# Google Cloud Speech-to-Text (Chirp 2/3)
+# google-cloud-speech>=2.26
+
+# Local faster-whisper (offline, free, real word timestamps)
+# faster-whisper>=1.0
+
+# Local mlx-whisper (Apple Silicon Macs only, fast + offline)
+# mlx-whisper>=0.4

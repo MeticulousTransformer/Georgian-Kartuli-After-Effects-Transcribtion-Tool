@@ -1,0 +1,16 @@
+{
+  "language_code": "ka",
+  "text": "გამარჯობა როგორ ხარ? კარგად ვარ.",
+  "words": [
+    {"text": "გამარჯობა", "start": 0.12, "end": 0.48, "type": "word", "speaker_id": null},
+    {"text": " ", "start": 0.48, "end": 0.52, "type": "spacing"},
+    {"text": "როგორ", "start": 0.52, "end": 0.85, "type": "word", "speaker_id": null},
+    {"text": " ", "start": 0.85, "end": 0.9, "type": "spacing"},
+    {"text": "ხარ?", "start": 0.9, "end": 1.2, "type": "word", "speaker_id": null},
+    {"text": "(laughs)", "start": 1.2, "end": 1.9, "type": "audio_event"},
+    {"text": "კარგად", "start": 2.0, "end": 2.4, "type": "word", "speaker_id": null},
+    {"text": " ", "start": 2.4, "end": 2.45, "type": "spacing"},
+    {"text": "ვარ", "start": 2.45, "end": 2.8, "type": "word", "speaker_id": null},
+    {"text": ".", "start": 2.8, "end": 2.85, "type": "word", "speaker_id": null}
+  ]
+}

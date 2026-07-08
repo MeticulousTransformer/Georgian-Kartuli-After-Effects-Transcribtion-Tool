@@ -1,0 +1,24 @@
+# Secrets — never commit API keys
+backend/.env
+backend/config.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Generated output / debug files
+exports/
+
+# Local whisper models (huge binaries)
+models/
+*.bin
+
+# macOS / Windows junk
+.DS_Store
+Thumbs.db
+
+# After Effects autosaves (if project ever lives here)
+*.aep.bak
+Adobe After Effects Auto-Save/
