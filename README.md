@@ -100,7 +100,7 @@ You only need ONE provider to work. Fill only what you have.
 
 | Provider | Georgian (tested on conversational audio) | Word timestamps | Cost |
 |---|---|---|---|
-| **ElevenLabs Scribe v2** | ✅ **excellent — the only recommended option** | ✅ real | paid API (free tier to test, ~$0.22/audio-hour after) |
+| **ElevenLabs Scribe v2** | ✅ **excellent — the only recommended option** | ✅ real | paid API (free tier to test, ~$0.22/audio-hour after), Basically free or negligable |
 | faster-whisper (local) | ❌ bad (~20-30% right, skips words) | ✅ real | free |
 | mlx-whisper (local) | ❌ bad (same whisper model) | ✅ real | free |
 | whisper.cpp (local) | ❌ bad + experimental timings | ⚠️ experimental | free |
