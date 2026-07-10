@@ -9,8 +9,10 @@ of manual keyframing takes minutes.
 <!-- DEMO GIF: record ~20s of panel → Transcribe → Generate → playback, save as docs/demo.gif -->
 <!-- ![demo](docs/demo.gif) -->
 
-- 🎙️ **9 swappable ASR providers** — ElevenLabs Scribe (best Georgian), Gladia, Azure,
-  AssemblyAI, OpenAI whisper-1, Google Chirp, plus free local whisper.cpp / faster-whisper / mlx-whisper
+- 🎙️ **9 swappable ASR providers** — **ElevenLabs Scribe is the only one that handles
+  Georgian well** (tested on real conversational audio). The others (Gladia, Azure,
+  AssemblyAI, OpenAI, Google Chirp, local whisper variants) are wired in but poor or
+  untested for Georgian — treat them as experimental / English-only
 - ⏱️ **True word-level timestamps** — each word animates when it's spoken
 - 🎨 **11 animation presets** — Highlight Word, Active Word Box (CapCut style), Bounce In,
   Pop Karaoke, Typewriter, Brutalist Georgian, and more
@@ -92,19 +94,23 @@ Nothing to download — just API keys (next section).
 
 You only need ONE provider to work. Fill only what you have.
 
-### Georgian support per provider
+### Georgian support per provider (real-world tested)
 
-| Provider | Georgian | Word timestamps | Cost |
+**Short version: use ElevenLabs for Georgian. Everything else disappointed or is untested.**
+
+| Provider | Georgian (tested on conversational audio) | Word timestamps | Cost |
 |---|---|---|---|
-| ElevenLabs Scribe v2 | ✅ excellent | ✅ real | paid API |
-| Gladia (Whisper cloud) | ✅ good | ✅ real | free tier available |
-| Azure AI Speech | ✅ (ka-GE) | ✅ real | free tier 5h/month |
-| AssemblyAI (nano) | ✅ ok | ✅ real | paid, cheap |
-| OpenAI whisper-1 | ✅ good | ✅ real | paid, cheap |
-| Google Chirp 2/3 | ✅ (ka-GE) | ✅ (Chirp 2/3) | paid |
-| whisper.cpp (local) | ✅ good (large-v3) | ⚠️ experimental | free |
-| faster-whisper (local) | ✅ good (large-v3) | ✅ real | free |
-| mlx-whisper (local) | ✅ good | ✅ real | free |
+| **ElevenLabs Scribe v2** | ✅ **excellent — the only recommended option** | ✅ real | paid API (free tier to test, ~$0.22/audio-hour after) |
+| faster-whisper (local) | ❌ bad (~20-30% right, skips words) | ✅ real | free |
+| mlx-whisper (local) | ❌ bad (same whisper model) | ✅ real | free |
+| whisper.cpp (local) | ❌ bad + experimental timings | ⚠️ experimental | free |
+| Gladia (Whisper cloud) | ⚠️ untested, whisper-based so expect similar | ✅ real | free tier |
+| Azure AI Speech | ⚠️ untested for Georgian | ✅ real | free tier 5h/month |
+| AssemblyAI (nano) | ⚠️ untested for Georgian | ✅ real | paid, cheap |
+| OpenAI whisper-1 | ⚠️ untested, whisper-based | ✅ real | paid, cheap |
+| Google Chirp 2/3 | ⚠️ untested for Georgian | ✅ (Chirp 2/3) | paid |
+
+For **English**, the local whisper providers work fine and cost nothing.
 
 ---
 
