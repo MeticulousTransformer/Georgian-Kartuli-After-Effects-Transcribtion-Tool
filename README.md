@@ -1,11 +1,29 @@
 # Kartuli Caption Forge
 
-Georgian/English word-timed caption animator for After Effects.
-Python backend transcribes speech (word-level timestamps), groups words into
-3–4 word chunks, and an AE panel generates animated word-by-word text layers.
+**Word-timed animated captions for After Effects — built for Georgian (ქართული), works for English too.**
+
+Select a video in AE → transcribe with the AI provider of your choice → get animated
+word-by-word caption layers (TikTok/CapCut style) at exact timestamps. What took hours
+of manual keyframing takes minutes.
+
+<!-- DEMO GIF: record ~20s of panel → Transcribe → Generate → playback, save as docs/demo.gif -->
+<!-- ![demo](docs/demo.gif) -->
+
+- 🎙️ **9 swappable ASR providers** — ElevenLabs Scribe (best Georgian), Gladia, Azure,
+  AssemblyAI, OpenAI whisper-1, Google Chirp, plus free local whisper.cpp / faster-whisper / mlx-whisper
+- ⏱️ **True word-level timestamps** — each word animates when it's spoken
+- 🎨 **11 animation presets** — Highlight Word, Active Word Box (CapCut style), Bounce In,
+  Pop Karaoke, Typewriter, Brutalist Georgian, and more
+- 📐 Full typography control: any installed font, colors, multi-line wrapping, rounded
+  background boxes, safe-area anchors for 9:16 / 1:1 / 16:9
+- 🛡️ **Non-destructive** — everything generates into a fresh precomp; your work is never touched
+- 🔍 Every intermediate JSON saved to `exports/` for debugging and hand-editing
 
 Works on **macOS, Windows, Linux** (backend). After Effects panel: macOS + Windows
 (Adobe doesn't ship AE for Linux — run the backend on Linux and AE elsewhere if needed).
+
+License: MIT. Contributions welcome — especially new animation presets
+(`ae/lib/presets.jsx`, ~10 lines each) and ASR adapters (`backend/providers/`, one file each).
 
 ---
 

@@ -15,6 +15,9 @@ exports/
 models/
 *.bin
 
+# Knowledge-graph tooling output (local analysis, not part of the tool)
+graphify-out/
+
 # macOS / Windows junk
 .DS_Store
 Thumbs.db
