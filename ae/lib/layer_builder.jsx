@@ -60,12 +60,25 @@ function KCF_wordsForCaption(doc, caption) {
 }
 
 /* Break word indices into visual lines.
-   wordsPerLine / charsPerLine: 0 disables that limit. */
+   wordsPerLine / charsPerLine: 0 disables that limit.
+   minWordsPerLine rebalances short lines when the limits allow it. */
 function KCF_breakLines(words, settings) {
     var maxWpl = settings.wordsPerLine || 0;
+    var minWpl = settings.minWordsPerLine || 0;
     var maxCpl = settings.charsPerLine || 0;
     var lines = [[]];
     var lineChars = 0;
+
+    function charsForLine(indices) {
+        var total = 0;
+        for (var ci = 0; ci < indices.length; ci++) {
+            var word = words[indices[ci]];
+            var wordText = word.text + (word.punctuationAfter || "");
+            total += wordText.length + (ci > 0 ? 1 : 0);
+        }
+        return total;
+    }
+
     for (var i = 0; i < words.length; i++) {
         var text = words[i].text + (words[i].punctuationAfter || "");
         var cur = lines[lines.length - 1];
@@ -81,34 +94,172 @@ function KCF_breakLines(words, settings) {
         cur.push(i);
         lineChars = wouldBe;
     }
+
+    if (maxWpl > 0 && minWpl > maxWpl) { minWpl = maxWpl; }
+    for (var li = lines.length - 1; li > 0; li--) {
+        while (lines[li].length < minWpl &&
+                lines[li - 1].length > minWpl) {
+            var moveIndex = lines[li - 1][lines[li - 1].length - 1];
+            if (maxCpl > 0 &&
+                    charsForLine([moveIndex].concat(lines[li])) > maxCpl) {
+                break;
+            }
+            lines[li - 1].pop();
+            lines[li].unshift(moveIndex);
+        }
+    }
     return lines;
 }
 
-/* Build all word layers for one caption inside precomp. */
-function KCF_buildCaption(precomp, doc, caption, ci, settings, pos) {
+/* Width each line is stretched to, or 0 when fitting is off.
+   A boundary of 0 means "the comp, inside the safe margins". */
+function KCF_fitTargetWidth(comp, settings) {
+    if (!settings.fitBoundary) { return 0; }
+    var width = settings.fitWidth;
+    if (!width || width <= 0) {
+        width = comp.width - (settings.safeMargin || 0) * 2;
+    }
+    return (width > 0) ? width : 0;
+}
+
+/* Scale each line's type until the line spans target.
+   Word spacing is fixed, so the glyphs share whatever is left once the
+   gaps are taken out. Two passes: type metrics are not perfectly linear
+   in point size, so the first guess is re-measured and corrected. */
+function KCF_restyleLine(layers, rects, wordStyles, indices, size, tracking) {
+    for (var i = 0; i < indices.length; i++) {
+        var idx = indices[i];
+        var style = KCF_withFontSize(wordStyles[idx], size);
+        style.tracking = tracking;
+        KCF_styleTextLayer(layers[idx], style);
+        rects[idx] = layers[idx].sourceRectAtTime(0, false);
+    }
+}
+
+/* Glyph width of a line as it currently stands. */
+function KCF_lineGlyphWidth(rects, indices) {
+    var total = 0;
+    for (var i = 0; i < indices.length; i++) { total += rects[indices[i]].width; }
+    return total;
+}
+
+/* Open tracking until the line reaches room, or the ceiling stops it.
+   AE tracking is thousandths of an em added after every character, so a
+   unit widens the line by size/1000 for each character on it. */
+function KCF_trackLineToWidth(layers, rects, wordStyles, words, indices,
+        settings, room, size, maxTracking) {
+    var chars = 0;
+    for (var i = 0; i < indices.length; i++) {
+        var word = words[indices[i]];
+        chars += String(word.text + (word.punctuationAfter || "")).length;
+    }
+    if (chars <= 0) { return; }
+    var tracking = settings.tracking || 0;
+    for (var pass = 0; pass < 2; pass++) {
+        var gap = room - KCF_lineGlyphWidth(rects, indices);
+        if (gap <= 0.5) { return; }
+        tracking += gap * 1000 / (size * chars);
+        if (tracking > maxTracking) { tracking = maxTracking; }
+        KCF_restyleLine(layers, rects, wordStyles, indices, size, tracking);
+        if (tracking >= maxTracking) { return; }
+    }
+}
+
+function KCF_fitLinesToWidth(layers, rects, wordStyles, words, lines, settings, target) {
+    var maxSize = (settings.fitMaxFontSize > 0)
+        ? settings.fitMaxFontSize : settings.fontSize * 4;
+    var maxTracking = settings.fitMaxTracking || 0;
+    var baseTracking = settings.tracking || 0;
+    for (var l = 0; l < lines.length; l++) {
+        var indices = lines[l];
+        var room = target - settings.wordSpacing * (indices.length - 1);
+        if (room <= 0) { continue; }
+        var size = settings.fontSize;
+        var capped = false;
+        for (var pass = 0; pass < 2; pass++) {
+            var glyphs = KCF_lineGlyphWidth(rects, indices);
+            if (glyphs <= 0) { break; }
+            size = size * room / glyphs;
+            if (size > maxSize) { size = maxSize; capped = true; }
+            if (size < 1) { size = 1; }
+            KCF_restyleLine(layers, rects, wordStyles, indices, size, baseTracking);
+        }
+        /* Size alone cannot fill a wide boundary from a short line once
+           it hits the ceiling. Tracking is the other lever on width. */
+        if (capped && maxTracking > 0) {
+            KCF_trackLineToWidth(layers, rects, wordStyles, words, indices,
+                settings, room, size, maxTracking);
+        }
+    }
+}
+
+/* Tallest rect on a line, and its highest top (top is negative). */
+function KCF_lineExtent(rects, line) {
+    var height = 0, top = 0;
+    for (var i = 0; i < line.length; i++) {
+        var rect = rects[line[i]];
+        if (rect.height > height) { height = rect.height; }
+        if (rect.top < top) { top = rect.top; }
+    }
+    return { height: height, top: top };
+}
+
+/* Baseline-to-baseline offset of every line from the first.
+   Unfitted captions share one gap; fitted lines differ in size, so each
+   step follows the two lines it sits between. */
+function KCF_lineOffsets(rects, lines, settings, fitted) {
+    var offsets = [0];
+    var l;
+    if (!fitted) {
+        var gap = (settings.lineHeight && settings.lineHeight > 0)
+            ? settings.lineHeight : Math.round(settings.fontSize * 1.2);
+        for (l = 1; l < lines.length; l++) { offsets.push(l * gap); }
+        return offsets;
+    }
+    for (l = 1; l < lines.length; l++) {
+        var step = (KCF_lineExtent(rects, lines[l - 1]).height +
+            KCF_lineExtent(rects, lines[l]).height) / 2 * 1.12;
+        offsets.push(offsets[l - 1] + step);
+    }
+    return offsets;
+}
+
+/* Build all word layers for one caption inside precomp.
+   shuffler is optional; without one every word gets the same style. */
+function KCF_buildCaption(precomp, doc, caption, ci, settings, pos, shuffler) {
     var words = KCF_wordsForCaption(doc, caption);
     if (words.length === 0) { return; }
 
     // 1) create + style layers, collect measured rects
-    var layers = [], rects = [];
+    var layers = [], rects = [], wordStyles = [];
     var spacing = settings.wordSpacing;
-    var maxH = 0;
+    var traits = shuffler ? shuffler.nextCaption(words.length) : null;
     for (var i = 0; i < words.length; i++) {
         var displayText = words[i].text + (words[i].punctuationAfter || "");
         var layer = precomp.layers.addText(displayText);
-        KCF_styleTextLayer(layer, settings);
-        var rect = layer.sourceRectAtTime(0, false);
+        // kept so a refit can restyle the word without losing its look
+        var wordStyle = traits ? KCF_variantStyle(settings, traits[i]) : settings;
+        KCF_styleTextLayer(layer, wordStyle);
         layers.push(layer);
-        rects.push(rect);
-        if (rect.height > maxH) { maxH = rect.height; }
+        wordStyles.push(wordStyle);
+        rects.push(layer.sourceRectAtTime(0, false));
     }
 
-    // 2) break into lines, measure each line
+    // 2) break into lines, then optionally stretch each to the boundary
     var lines = KCF_breakLines(words, settings);
-    var lineGap = (settings.lineHeight && settings.lineHeight > 0)
-        ? settings.lineHeight : Math.round(settings.fontSize * 1.2);
+    var fitWidth = KCF_fitTargetWidth(precomp, settings);
+    if (fitWidth > 0) {
+        KCF_fitLinesToWidth(layers, rects, wordStyles, words, lines, settings,
+            fitWidth);
+    }
+
+    // measured after any refit, since the sizes may have just changed
+    var maxH = 0, topMost = 0;
+    for (var m = 0; m < rects.length; m++) {
+        if (rects[m].height > maxH) { maxH = rects[m].height; }
+        if (rects[m].top < topMost) { topMost = rects[m].top; }  // top is negative
+    }
     var lineWidths = [];
-    var maxLineWidth = 0;
     for (var li = 0; li < lines.length; li++) {
         var lw = 0;
         for (var wi = 0; wi < lines[li].length; wi++) {
@@ -116,13 +267,26 @@ function KCF_buildCaption(precomp, doc, caption, ci, settings, pos) {
         }
         lw += spacing * (lines[li].length - 1);
         lineWidths.push(lw);
-        if (lw > maxLineWidth) { maxLineWidth = lw; }
     }
+    var lineOffsets = KCF_lineOffsets(rects, lines, settings, fitWidth > 0);
+    var blockHeight = lineOffsets[lineOffsets.length - 1];
 
     // bottom anchor: block grows upward so the LAST line sits at pos.y
     var baseY = pos.y;
     if (settings.anchorPreset === "bottom_center") {
-        baseY = pos.y - (lines.length - 1) * lineGap;
+        baseY = pos.y - blockHeight;
+    }
+
+    /* Anchor point, in layer space: each word gets its own horizontal
+       centre so scale/rotation pivot mid-word instead of at the left edge.
+       The vertical centre is shared across the caption so a pop keeps the
+       line optically level rather than pivoting higher on short words than
+       on ones with descenders. Fitted lines differ in size, so there the
+       pivot follows each line instead of the caption as a whole. */
+    function anchorYFor(lineIndex) {
+        if (fitWidth <= 0) { return topMost + maxH / 2; }
+        var extent = KCF_lineExtent(rects, lines[lineIndex]);
+        return extent.top + extent.height / 2;
     }
 
     // 3) position, name, metadata, preset — per line
@@ -131,7 +295,8 @@ function KCF_buildCaption(precomp, doc, caption, ci, settings, pos) {
     var layouts = [];
     var minX = null, maxX = null;
     for (var l = 0; l < lines.length; l++) {
-        var lineY = baseY + l * lineGap;
+        var anchorY = anchorYFor(l);
+        var lineY = baseY + lineOffsets[l];
         var startX;
         if (settings.alignment === "left") { startX = pos.x; }
         else if (settings.alignment === "right") { startX = pos.x - lineWidths[l]; }
@@ -144,7 +309,11 @@ function KCF_buildCaption(precomp, doc, caption, ci, settings, pos) {
             var idx = lines[l][k];
             var lyr = layers[idx];
             var w = words[idx];
-            var basePos = [cursor - rects[idx].left, lineY];
+            /* The layer origin ends up at basePos - anchor, which keeps the
+               glyphs' left edge at the cursor and their baseline at lineY. */
+            var anchor = [rects[idx].left + rects[idx].width / 2, anchorY];
+            var basePos = [cursor + rects[idx].width / 2, lineY + anchorY];
+            lyr.property("Transform").property("Anchor Point").setValue(anchor);
             lyr.property("Transform").property("Position").setValue(basePos);
             lyr.name = "KCF_C" + KCF_pad3(ci) + "_W" + KCF_pad3(idx) + "_" + w.text;
             lyr.comment = JSON.stringify({
@@ -154,18 +323,16 @@ function KCF_buildCaption(precomp, doc, caption, ci, settings, pos) {
                 start: w.start,
                 end: w.end,
                 line: l,
+                variant: traits ? traits[idx].look : null,
+                font: traits ? traits[idx].font : null,
                 preset: settings.preset
             });
             lyr.inPoint = caption.start;
             lyr.outPoint = Math.max(caption.end, caption.start + 0.05);
-            if (settings.shadow) {
-                try {
-                    var sh = lyr.property("Effects").addProperty("ADBE Drop Shadow");
-                    sh.property("ADBE Drop Shadow-0002").setValue(0.6); // opacity
-                } catch (e) { /* effect unavailable */ }
-            }
+            if (settings.shadow) { KCF_addDropShadow(lyr, settings); }
             perWord(lyr, w, caption, settings, basePos);
-            layouts.push({ layer: lyr, word: w, rect: rects[idx], pos: basePos });
+            layouts.push({ layer: lyr, word: w, rect: rects[idx],
+                pos: basePos, anchor: anchor });
             cursor += rects[idx].width + spacing;
         }
     }
@@ -179,14 +346,14 @@ function KCF_buildCaption(precomp, doc, caption, ci, settings, pos) {
     if (settings.backgroundBox) {
         var pad = Math.round(settings.fontSize * 0.35);
         var boxW = Math.ceil((maxX - minX) + pad * 2);
-        var boxH = Math.ceil((lines.length - 1) * lineGap + maxH + pad * 2);
+        var boxH = Math.ceil(blockHeight + maxH + pad * 2);
         // rects are baseline-relative: top is negative above the baseline
         var top = rects[0] ? rects[0].top : -settings.fontSize;
         var box = KCF_addRoundRect(
             precomp, "KCF_C" + KCF_pad3(ci) + "_BOX",
             boxW, boxH, settings.boxColor, settings.boxRadius || 0,
             (minX + maxX) / 2,
-            baseY + top + ((lines.length - 1) * lineGap + maxH) / 2);
+            baseY + top + (blockHeight + maxH) / 2);
         box.inPoint = caption.start;
         box.outPoint = Math.max(caption.end, caption.start + 0.05);
         // layers[0] was created first, so it is the bottom-most text layer;
@@ -223,8 +390,10 @@ function KCF_generate(doc, settings) {
         precomp.parentFolder = folder;
 
         var pos = KCF_anchorPosition(settings, precomp);
+        var shuffler = KCF_shufflerFor(settings);
         for (var ci = 0; ci < doc.captions.length; ci++) {
-            KCF_buildCaption(precomp, doc, doc.captions[ci], ci, settings, pos);
+            KCF_buildCaption(precomp, doc, doc.captions[ci], ci, settings, pos,
+                shuffler);
         }
 
         var compLayer = activeComp.layers.add(precomp);

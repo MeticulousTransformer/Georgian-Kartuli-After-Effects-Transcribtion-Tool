@@ -32,26 +32,87 @@ function KCF_styleTextLayer(textLayer, style) {
     var doc = prop.value;
     if (style.font) { doc.font = style.font; }
     doc.fontSize = style.fontSize;
-    doc.applyFill = true;
-    doc.fillColor = style.fillColor;
     doc.tracking = style.tracking;
     if (style.lineHeight && style.lineHeight > 0) {
         doc.autoLeading = false;
         doc.leading = style.lineHeight;
     }
+
+    // fill off + stroke on gives hollow outlined text
+    doc.applyFill = (style.fill !== false);
+    if (doc.applyFill) { doc.fillColor = style.fillColor; }
+
     if (style.stroke) {
         doc.applyStroke = true;
         doc.strokeColor = style.strokeColor;
         doc.strokeWidth = style.strokeWidth;
-        doc.strokeOverFill = false;
+        /* AE always centres the stroke on the glyph outline. Painting the
+           fill on top hides its inner half, which reads as an outer
+           stroke; a true inner stroke is not available on AE text. */
+        doc.strokeOverFill = (style.strokePosition === "center");
     } else {
         doc.applyStroke = false;
     }
+    if (!doc.applyFill && !doc.applyStroke) {
+        doc.applyFill = true;               // otherwise nothing renders
+        doc.fillColor = style.fillColor;
+    }
+
     doc.justification = ParagraphJustification.LEFT_JUSTIFY;
     if (style.fauxBold !== undefined && doc.fauxBold !== undefined) {
         try { doc.fauxBold = style.fauxBold; } catch (e) { /* pre-CC2019 */ }
     }
+    if (style.fauxItalic !== undefined && doc.fauxItalic !== undefined) {
+        try { doc.fauxItalic = style.fauxItalic; } catch (e) { /* pre-CC2019 */ }
+    }
     prop.setValue(doc);
+}
+
+/* A copy of a style set at a different size. The original is untouched,
+   so the caller can re-derive from it as often as it likes. */
+function KCF_withFontSize(style, fontSize) {
+    var out = {};
+    for (var key in style) {
+        if (style.hasOwnProperty(key)) { out[key] = style[key]; }
+    }
+    out.fontSize = fontSize;
+    return out;
+}
+
+/* Drop shadow with real controls behind it.
+   AE's Drop Shadow opacity is not a percentage — it runs to whatever
+   maximum the property reports (255 on current builds), so the panel's
+   0-100 value gets scaled into that range rather than passed straight
+   through. */
+function KCF_addDropShadow(textLayer, style) {
+    var fx;
+    try {
+        fx = textLayer.property("Effects").addProperty("ADBE Drop Shadow");
+    } catch (e) {
+        return null;                        // effect unavailable
+    }
+    function set(matchName, value) {
+        try { fx.property(matchName).setValue(value); } catch (e) {}
+    }
+    function pick(value, fallback) {
+        if (value === undefined || value === null) { return fallback; }
+        if (typeof value === "number" && isNaN(value)) { return fallback; }
+        return value;
+    }
+
+    set("ADBE Drop Shadow-0001", pick(style.shadowColor, [0, 0, 0]));
+
+    try {
+        var opacity = fx.property("ADBE Drop Shadow-0002");
+        var pct = Math.max(0, Math.min(100, pick(style.shadowOpacity, 60)));
+        var top = opacity.hasMax ? opacity.maxValue : 100;
+        opacity.setValue(top * pct / 100);
+    } catch (e) {}
+
+    set("ADBE Drop Shadow-0003", pick(style.shadowAngle, 135));
+    set("ADBE Drop Shadow-0004", pick(style.shadowDistance, 8));
+    set("ADBE Drop Shadow-0005", pick(style.shadowSoftness, 12));
+    return fx;
 }
 
 /* Measure a layer's source rect at a time where the layer exists. */

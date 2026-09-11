@@ -14,6 +14,24 @@ def w(i, text, start, end, punct=""):
 
 
 class TestGrouping(unittest.TestCase):
+    def test_min_words_rebalances_sentence_tail(self):
+        words = [
+            w(i, f"word{i}", i * 0.25, i * 0.25 + 0.2,
+              punct="." if i == 4 else "")
+            for i in range(5)
+        ]
+        original_times = [(word.start, word.end) for word in words]
+        opts = GroupingOptions.from_dict({
+            "minWords": 2,
+            "maxWords": 4,
+            "minCaptionDuration": 0,
+        })
+
+        captions = group_words(words, opts)
+
+        self.assertEqual([c.wordIds for c in captions], [[0, 1, 2], [3, 4]])
+        self.assertEqual([(word.start, word.end) for word in words], original_times)
+
     def test_max_words_split(self):
         words = [w(i, f"სიტყვა{i}", i * 0.3, i * 0.3 + 0.25) for i in range(6)]
         captions = group_words(words, GroupingOptions(maxWords=4))
@@ -65,11 +83,49 @@ class TestGrouping(unittest.TestCase):
         self.assertEqual(len(captions), 2)
         self.assertEqual(captions[1].wordIds, [2])
 
-    def test_min_duration_extension(self):
+    def test_min_duration_does_not_extend_real_caption_end(self):
         words = [w(0, "ჰო", 0.0, 0.2), w(1, "კაი", 2.0, 2.5)]
         captions = group_words(words)
         self.assertEqual(len(captions), 2)
-        self.assertAlmostEqual(captions[0].end, 0.5, places=3)
+        self.assertAlmostEqual(captions[0].end, 0.2, places=3)
+
+    def test_min_duration_rebalances_using_real_word_span(self):
+        words = [
+            w(0, "one", 0.0, 0.3),
+            w(1, "two", 0.31, 0.6),
+            w(2, "three", 0.61, 0.9),
+            w(3, "four", 0.91, 1.2),
+            w(4, "five", 1.21, 1.35, punct="."),
+        ]
+        opts = GroupingOptions.from_dict({
+            "minWords": 1,
+            "maxWords": 4,
+            "minCaptionDuration": 0.4,
+        })
+
+        captions = group_words(words, opts)
+
+        self.assertEqual([c.wordIds for c in captions], [[0, 1, 2], [3, 4]])
+        self.assertAlmostEqual(captions[1].start, 0.91, places=3)
+        self.assertAlmostEqual(captions[1].end, 1.35, places=3)
+
+    def test_remove_commas_and_periods_after_sentence_grouping(self):
+        words = [
+            w(0, "hello", 0.0, 0.2, punct=","),
+            w(1, "world", 0.21, 0.4, punct="."),
+            w(2, "next", 0.41, 0.6),
+        ]
+        opts = GroupingOptions.from_dict({
+            "minWords": 1,
+            "minCaptionDuration": 0,
+            "removeCommasAndPeriods": True,
+        })
+
+        captions = group_words(words, opts)
+
+        self.assertEqual([c.wordIds for c in captions], [[0, 1], [2]])
+        self.assertEqual([word.punctuationAfter for word in words], ["", "", ""])
+        self.assertEqual([c.text for c in captions], ["hello world", "next"])
 
     def test_min_duration_no_collision(self):
         words = [w(0, "ჰო", 0.0, 0.2), w(1, "კაი", 0.3, 3.0)]

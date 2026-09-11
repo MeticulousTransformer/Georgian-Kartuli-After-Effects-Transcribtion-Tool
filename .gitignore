@@ -2,6 +2,9 @@
 backend/.env
 backend/config.env
 
+# Older nested project copy
+/Georgian-Kartuli-After-Effects-Transcribtion-Tool-kml/
+
 # Python
 .venv/
 __pycache__/

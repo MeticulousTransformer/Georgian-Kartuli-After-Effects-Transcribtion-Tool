@@ -6,8 +6,7 @@ New caption starts when:
   - previous word ends a sentence (. ? ! …)
   - caption duration would exceed maxCaptionDuration
   - caption text would exceed maxChars
-Captions shorter than minCaptionDuration get extended slightly
-unless that collides with the next caption.
+Minimum word-count and duration targets rebalance chunks when hard limits allow.
 """
 from __future__ import annotations
 
@@ -21,23 +20,28 @@ SENTENCE_END = set(".?!…")
 
 @dataclass
 class GroupingOptions:
+    minWords: int = 2
     maxWords: int = 4
     maxChars: int = 42
     pauseBreakSeconds: float = 0.55
     minCaptionDuration: float = 0.5
     maxCaptionDuration: float = 3.5
+    removeCommasAndPeriods: bool = False
 
     @classmethod
     def from_dict(cls, d: Optional[dict]) -> "GroupingOptions":
         d = d or {}
         opts = cls(
+            minWords=int(d.get("minWords", 2)),
             maxWords=int(d.get("maxWords", 4)),
             maxChars=int(d.get("maxChars", 42)),
             pauseBreakSeconds=float(d.get("pauseBreakSeconds", 0.55)),
             minCaptionDuration=float(d.get("minCaptionDuration", 0.5)),
             maxCaptionDuration=float(d.get("maxCaptionDuration", 3.5)),
+            removeCommasAndPeriods=bool(d.get("removeCommasAndPeriods", False)),
         )
         opts.maxWords = max(1, min(6, opts.maxWords))
+        opts.minWords = max(1, min(opts.maxWords, opts.minWords))
         return opts
 
 
@@ -51,23 +55,14 @@ def ends_sentence(word: Word) -> bool:
 
 def group_words(words: List[Word], opts: Optional[GroupingOptions] = None) -> List[Caption]:
     opts = opts or GroupingOptions()
-    captions: List[Caption] = []
+    chunks: List[List[Word]] = []
     current: List[Word] = []
 
     def flush():
         nonlocal current
         if not current:
             return
-        captions.append(
-            Caption(
-                id=len(captions),
-                text=caption_text(current),
-                start=current[0].start,
-                end=current[-1].end,
-                wordIds=[w.id for w in current],
-                lineIndex=0,
-            )
-        )
+        chunks.append(current)
         current = []
 
     for w in words:
@@ -86,11 +81,53 @@ def group_words(words: List[Word], opts: Optional[GroupingOptions] = None) -> Li
             flush()
     flush()
 
-    # Extend too-short captions without colliding with the next one.
-    for i, c in enumerate(captions):
-        if c.end - c.start < opts.minCaptionDuration:
-            desired = c.start + opts.minCaptionDuration
-            if i + 1 < len(captions):
-                desired = min(desired, captions[i + 1].start - 0.01)
-            c.end = max(c.end, round(desired, 4))
+    def fits_max(candidate: List[Word]) -> bool:
+        return (
+            len(candidate) <= opts.maxWords
+            and candidate[-1].end - candidate[0].start <= opts.maxCaptionDuration
+            and len(caption_text(candidate)) <= opts.maxChars
+        )
+
+    def meets_min(candidate: List[Word]) -> bool:
+        return (
+            len(candidate) >= opts.minWords
+            and candidate[-1].end - candidate[0].start >= opts.minCaptionDuration
+        )
+
+    for i in range(len(chunks) - 1, 0, -1):
+        previous = chunks[i - 1]
+        chunk = chunks[i]
+        hard_boundary = (
+            ends_sentence(previous[-1])
+            or chunk[0].start - previous[-1].end > opts.pauseBreakSeconds
+        )
+        if hard_boundary:
+            continue
+        while not meets_min(chunk) and len(previous) > 1:
+            candidate = [previous[-1]] + chunk
+            if not fits_max(candidate) or not meets_min(previous[:-1]):
+                break
+            previous.pop()
+            chunk.insert(0, candidate[0])
+
+    captions = [
+        Caption(
+            id=i,
+            text=caption_text(chunk),
+            start=chunk[0].start,
+            end=chunk[-1].end,
+            wordIds=[w.id for w in chunk],
+            lineIndex=0,
+        )
+        for i, chunk in enumerate(chunks)
+    ]
+
+    if opts.removeCommasAndPeriods:
+        for word in words:
+            word.punctuationAfter = (
+                word.punctuationAfter.replace(",", "").replace(".", "")
+            )
+        for caption, chunk in zip(captions, chunks):
+            caption.text = caption_text(chunk)
+
     return captions

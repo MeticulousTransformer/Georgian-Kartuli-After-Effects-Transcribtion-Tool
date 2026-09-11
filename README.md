@@ -14,10 +14,24 @@ of manual keyframing takes minutes.
   AssemblyAI, OpenAI, Google Chirp, local whisper variants) are wired in but poor or
   untested for Georgian — treat them as experimental / English-only
 - ⏱️ **True word-level timestamps** — each word animates when it's spoken
-- 🎨 **11 animation presets** — Highlight Word, Active Word Box (CapCut style), Bounce In,
-  Pop Karaoke, Typewriter, Brutalist Georgian, and more
-- 📐 Full typography control: any installed font, colors, multi-line wrapping, rounded
-  background boxes, safe-area anchors for 9:16 / 1:1 / 16:9
+- 🎨 **12 animation presets** — Highlight Word, Active Word Box (CapCut style), Slide In,
+  Bounce In, Pop Karaoke, Typewriter, Brutalist Georgian, and more
+- 🧭 **Slide In with a direction dial** — drag the dial to choose the angle words fly in
+  from (0° = from below), with distance, duration, ease, dolly and real AE motion blur
+- 📐 Full typography control: any installed font, faux bold/italic, multi-line wrapping,
+  rounded background boxes, safe-area anchors for 9:16 / 1:1 / 16:9
+- 🖍️ **Fill, Stroke, Background and Shadow sections** — stroke colour, weight and
+  position; turn the fill off for hollow outlined captions; drop shadow with colour,
+  opacity, distance, angle and softness
+- 📏 **Fit to boundary** — scale every line until it spans a set width, so a one-word
+  line and a four-word line read at the same size, the stretched-to-the-margins look
+  used by social captions. Size is solved per line and capped; once it caps, tracking
+  opens up to close the rest
+- 🎲 **Style shuffle** — hand each word a different look (solid / highlight / hollow
+  outline) and a different font from a set you choose, so captions read as designed,
+  not uniform. Pick a single look to pin every word to it. Draws from a bag rather than
+  rolling dice, so no look repeats back to back and no caption reuses the pattern of
+  the previous three. Seeded, so a re-generate reproduces the same mix
 - 🛡️ **Non-destructive** — everything generates into a fresh precomp; your work is never touched
 - 🔍 Every intermediate JSON saved to `exports/` for debugging and hand-editing
 

@@ -8,6 +8,7 @@
 #include "lib/json2.js"
 #include "lib/http_client.jsx"
 #include "lib/text_measure.jsx"
+#include "lib/style_shuffle.jsx"
 #include "lib/presets.jsx"
 #include "lib/layer_builder.jsx"
 
@@ -66,9 +67,13 @@
         sbScroll.preferredSize.width = 16;
         sbScroll.alignment = ["right", "fill"];
 
+        /* No fixed height here. A tabbedpanel pinned to one clips whatever
+           its tabs hold past that point, and the scrollbar below measures
+           `content`, so it never sees the trapped overflow. Sizing to the
+           tallest tab puts the overflow where the scrollbar can reach it,
+           and keeps working as tabs gain controls. */
         var tabs = content.add("tabbedpanel");
         tabs.alignChildren = ["fill", "top"];
-        tabs.preferredSize.height = 330;
 
         // ================= SOURCE TAB =================
         var tSrc = tabs.add("tab", undefined, "Source");
@@ -128,11 +133,105 @@
             et.preferredSize.width = width || 55;
             return et;
         }
+        /* Circular direction dial. ScriptUI ships no dial control, so this
+           is a button we draw ourselves and drive from mouse drags. The
+           needle points at the side the word travels in FROM, and uses the
+           same maths as the preset so the dial cannot disagree with the
+           motion it produces. */
+        function angleDial(parent, initialDeg) {
+            var angle = initialDeg;
+
+            var row = parent.add("group");
+            row.orientation = "row";
+            row.alignChildren = ["left", "center"];
+            row.spacing = 10;
+
+            var dial = row.add("iconbutton", undefined, undefined,
+                { style: "toolbutton" });
+            dial.preferredSize = [66, 66];
+
+            var col = row.add("group");
+            col.orientation = "column";
+            col.alignChildren = ["left", "top"];
+            col.spacing = 4;
+            col.add("statictext", undefined, "Angle (0 = from bottom)");
+            var et = col.add("edittext", undefined, String(initialDeg));
+            et.preferredSize.width = 60;
+            var hint = col.add("statictext", undefined, "drag dial, shift snaps 15°");
+            hint.enabled = false;
+
+            function redraw() {
+                // ScriptUI has no invalidate(); re-assigning size repaints
+                try { dial.size = dial.size; } catch (e) {}
+                try { win.update(); } catch (e) {}
+            }
+            function setAngle(deg) {
+                deg = deg % 360;
+                if (deg < 0) { deg += 360; }
+                angle = deg;
+                et.text = String(Math.round(deg * 10) / 10);
+                redraw();
+            }
+
+            dial.onDraw = function () {
+                var g = this.graphics;
+                var w = this.size.width, h = this.size.height;
+                var cx = w / 2, cy = h / 2;
+                var r = Math.min(w, h) / 2 - 3;
+                var accent = [0.29, 0.56, 0.90, 1];
+
+                g.newPath();
+                g.ellipsePath(cx - r, cy - r, r * 2, r * 2);
+                g.fillPath(g.newBrush(g.BrushType.SOLID_COLOR, [0.16, 0.16, 0.16, 1]));
+                g.newPath();
+                g.ellipsePath(cx - r, cy - r, r * 2, r * 2);
+                g.strokePath(g.newPen(g.PenType.SOLID_COLOR, [0.45, 0.45, 0.45, 1], 1));
+
+                var v = KCF_slideOffset(angle, r);
+                g.newPath();
+                g.moveTo(cx, cy);
+                g.lineTo(cx + v[0], cy + v[1]);
+                g.strokePath(g.newPen(g.PenType.SOLID_COLOR, accent, 2));
+                g.newPath();
+                g.ellipsePath(cx + v[0] - 3, cy + v[1] - 3, 6, 6);
+                g.fillPath(g.newBrush(g.BrushType.SOLID_COLOR, accent));
+            };
+
+            var dragging = false;
+            function fromMouse(ev) {
+                var dx = ev.clientX - dial.size.width / 2;
+                var dy = ev.clientY - dial.size.height / 2;
+                if (dx === 0 && dy === 0) { return; }
+                var deg = KCF_slideAngleFromPoint(dx, dy);
+                if (ev.shiftKey) { deg = Math.round(deg / 15) * 15; }
+                setAngle(deg);
+            }
+            dial.addEventListener("mousedown", function (ev) {
+                dragging = true;
+                fromMouse(ev);
+            });
+            dial.addEventListener("mousemove", function (ev) {
+                if (dragging) { fromMouse(ev); }
+            });
+            dial.addEventListener("mouseup", function () { dragging = false; });
+            dial.addEventListener("mouseout", function () { dragging = false; });
+
+            et.onChange = function () {
+                var v = parseFloat(et.text);
+                setAngle(isNaN(v) ? 0 : v);
+            };
+
+            return { value: function () { return angle; } };
+        }
+
+        var etMinWords = numField(tGrp, "Min words per caption (1-6):", loadSetting("minWords", "2"));
         var etMaxWords = numField(tGrp, "Max words per caption (1-6):", loadSetting("maxWords", "4"));
-        var etMaxChars = numField(tGrp, "Max characters:", "42");
-        var etPause = numField(tGrp, "Pause break (s):", "0.55");
-        var etMinDur = numField(tGrp, "Min caption duration (s):", "0.5");
-        var etMaxDur = numField(tGrp, "Max caption duration (s):", "3.5");
+        var etMaxChars = numField(tGrp, "Max characters:", loadSetting("maxChars", "42"));
+        var etPause = numField(tGrp, "Pause break (s):", loadSetting("pauseBreakSeconds", "0.55"));
+        var etMinDur = numField(tGrp, "Min real caption duration (s):", loadSetting("minCaptionDuration", "0.5"));
+        var etMaxDur = numField(tGrp, "Max real caption duration (s):", loadSetting("maxCaptionDuration", "3.5"));
+        var cbRemoveCommasPeriods = tGrp.add("checkbox", undefined, "Remove commas and periods");
+        cbRemoveCommasPeriods.value = loadSetting("removeCommasAndPeriods", "false") === "true";
 
         // ================= TYPOGRAPHY TAB =================
         var tType = tabs.add("tab", undefined, "Type");
@@ -195,10 +294,11 @@
         var etFontSize = numField(tType, "Font size:", loadSetting("fontSize", "72"));
         var etTracking = numField(tType, "Tracking:", "0");
         var etLineHeight = numField(tType, "Line height (0 = auto):", "0");
-        var etWordSpacing = numField(tType, "Word spacing (px):", loadSetting("wordSpacing", "24"));
-        var etWordsPerLine = numField(tType, "Words per line (0 = one line):", loadSetting("wordsPerLine", "0"));
-        var etCharsPerLine = numField(tType, "Chars per line (0 = off):", loadSetting("charsPerLine", "0"));
-        var cbFauxBold = tType.add("checkbox", undefined, "Faux bold");
+        var gFaux = tType.add("group");
+        var cbFauxBold = gFaux.add("checkbox", undefined, "Faux bold");
+        var cbFauxItalic = gFaux.add("checkbox", undefined, "Faux italic");
+        cbFauxBold.value = loadSetting("fauxBold", "false") === "true";
+        cbFauxItalic.value = loadSetting("fauxItalic", "false") === "true";
 
         function colorField(parent, label, defaultHex) {
             var g = parent.add("group");
@@ -217,17 +317,109 @@
             };
             return et;
         }
-        var etFill = colorField(tType, "Text color:", loadSetting("fillColor", "#FFFFFF"));
-        var etHighlight = colorField(tType, "Highlight color:", loadSetting("highlightColor", "#FFD400"));
-        var cbShadow = tType.add("checkbox", undefined, "Drop shadow");
-        var gStroke = tType.add("group");
+        function section(parent, title) {
+            var p = parent.add("panel", undefined, title);
+            p.orientation = "column";
+            p.alignChildren = ["left", "top"];
+            p.margins = [10, 14, 10, 10];
+            p.spacing = 4;
+            return p;
+        }
+
+        // ================= STYLE TAB =================
+        var tStyle = tabs.add("tab", undefined, "Style");
+        tStyle.orientation = "column";
+        tStyle.alignChildren = ["left", "top"];
+
+        // ---- Fill ----
+        var pFill = section(tStyle, "Fill");
+        var cbFill = pFill.add("checkbox", undefined, "Fill text");
+        cbFill.value = loadSetting("fill", "true") !== "false";
+        var etFill = colorField(pFill, "Color:", loadSetting("fillColor", "#FFFFFF"));
+        var etHighlight = colorField(pFill, "Highlight:", loadSetting("highlightColor", "#FFD400"));
+        var stFillNote = pFill.add("statictext", undefined,
+            "uncheck, with stroke on, for hollow outlined text");
+        stFillNote.enabled = false;
+
+        // ---- Stroke ----
+        var pStroke = section(tStyle, "Stroke");
+        var gStroke = pStroke.add("group");
         var cbStroke = gStroke.add("checkbox", undefined, "Stroke");
-        var etStrokeW = gStroke.add("edittext", undefined, "4");
-        etStrokeW.preferredSize.width = 40;
-        var etStrokeColor = colorField(tType, "Stroke color:", "#000000");
-        var gBox = tType.add("group");
-        var cbBox = gBox.add("checkbox", undefined, "Background box");
-        var etBoxColor = colorField(tType, "Box color:", "#000000");
+        cbStroke.value = loadSetting("stroke", "false") === "true";
+        gStroke.add("statictext", undefined, "Weight:");
+        var etStrokeW = gStroke.add("edittext", undefined, loadSetting("strokeWidth", "7"));
+        etStrokeW.preferredSize.width = 45;
+        gStroke.add("statictext", undefined, "px");
+        var etStrokeColor = colorField(pStroke, "Color:", loadSetting("strokeColor", "#000000"));
+        var gStrokePos = pStroke.add("group");
+        gStrokePos.add("statictext", undefined, "Position:");
+        var ddStrokePos = gStrokePos.add("dropdownlist", undefined, ["Outer", "Center"]);
+        ddStrokePos.selection =
+            (loadSetting("strokePosition", "outer") === "center") ? 1 : 0;
+        var stStrokeNote = pStroke.add("statictext", undefined,
+            "AE text strokes cannot be inner");
+        stStrokeNote.enabled = false;
+
+        // ================= EFFECTS TAB =================
+        var tFx = tabs.add("tab", undefined, "Effects");
+        tFx.orientation = "column";
+        tFx.alignChildren = ["left", "top"];
+
+        // ---- Background ----
+        var pBg = section(tFx, "Background");
+        var cbBox = pBg.add("checkbox", undefined, "Background box");
+        cbBox.value = loadSetting("backgroundBox", "false") === "true";
+        var etBoxColor = colorField(pBg, "Color:", loadSetting("boxColor", "#000000"));
+        var etActiveBox = colorField(pBg, "Active word box:",
+            loadSetting("activeBoxColor", "#FF3B30"));
+        var etBoxRadius = numField(pBg, "Corner radius (px):",
+            loadSetting("boxRadius", "18"));
+
+        // ---- Shadow ----
+        var pShadow = section(tFx, "Shadow");
+        var cbShadow = pShadow.add("checkbox", undefined, "Drop shadow");
+        cbShadow.value = loadSetting("shadow", "false") === "true";
+        var etShadowColor = colorField(pShadow, "Color:", loadSetting("shadowColor", "#000000"));
+        var etShadowOpacity = numField(pShadow, "Opacity (%):", loadSetting("shadowOpacity", "60"));
+        var etShadowDistance = numField(pShadow, "Distance (px):", loadSetting("shadowDistance", "8"));
+        var etShadowAngle = numField(pShadow, "Angle (deg):", loadSetting("shadowAngle", "135"));
+        var etShadowSoftness = numField(pShadow, "Softness:", loadSetting("shadowSoftness", "12"));
+
+        // ---- Style shuffle ----
+        // back on the Style tab; a tab takes children whenever they are added
+        var pShuffle = section(tStyle, "Style shuffle");
+        var cbShuffle = pShuffle.add("checkbox", undefined,
+            "Give each word a different look");
+        cbShuffle.value = loadSetting("styleShuffle", "false") === "true";
+        var gLooks = pShuffle.add("group");
+        gLooks.add("statictext", undefined, "Looks:");
+        var cbLookSolid = gLooks.add("checkbox", undefined, "Solid");
+        var cbLookHighlight = gLooks.add("checkbox", undefined, "Highlight");
+        var cbLookOutline = gLooks.add("checkbox", undefined, "Outline");
+        cbLookSolid.value = loadSetting("shuffleSolid", "true") !== "false";
+        cbLookHighlight.value = loadSetting("shuffleHighlight", "true") !== "false";
+        cbLookOutline.value = loadSetting("shuffleOutline", "true") !== "false";
+        var gShuffleFonts = pShuffle.add("group");
+        gShuffleFonts.add("statictext", undefined, "Fonts:");
+        var etShuffleFonts = gShuffleFonts.add("edittext", undefined,
+            loadSetting("shuffleFonts", ""));
+        etShuffleFonts.preferredSize.width = 190;
+        var btnAddFont = gShuffleFonts.add("button", undefined, "Add current");
+        btnAddFont.preferredSize.width = 80;
+        btnAddFont.onClick = function () {
+            var ps = currentFontPS();
+            if (!ps) { return; }
+            var list = etShuffleFonts.text.replace(/^\s+/, "").replace(/\s+$/, "");
+            etShuffleFonts.text = list ? (list + ", " + ps) : ps;
+        };
+        var stFontNote = pShuffle.add("statictext", undefined,
+            "PostScript names, comma separated. Empty = the Type tab font");
+        stFontNote.enabled = false;
+        var etShuffleSeed = numField(pShuffle, "Seed (0 = new mix each run):",
+            loadSetting("shuffleSeed", "0"));
+        var stShuffleNote = pShuffle.add("statictext", undefined,
+            "outline borrows the Stroke weight, and its colour when Stroke is on");
+        stShuffleNote.enabled = false;
 
         // ================= POSITION TAB =================
         var tPos = tabs.add("tab", undefined, "Position");
@@ -248,6 +440,30 @@
         var ddAlign = gAlign.add("dropdownlist", undefined, ["Center", "Left", "Right"]);
         ddAlign.selection = 0;
 
+        var pLines = section(tPos, "Line breaking");
+        var etWordSpacing = numField(pLines, "Word spacing (px):",
+            loadSetting("wordSpacing", "24"));
+        var etWordsPerLine = numField(pLines, "Max words per line (0 = one line):",
+            loadSetting("wordsPerLine", "0"));
+        var etMinWordsPerLine = numField(pLines, "Min words per line:",
+            loadSetting("minWordsPerLine", "2"));
+        var etCharsPerLine = numField(pLines, "Chars per line (0 = off):",
+            loadSetting("charsPerLine", "0"));
+
+        var pFit = section(tPos, "Fit to boundary");
+        var cbFit = pFit.add("checkbox", undefined,
+            "Scale every line to fill the boundary");
+        cbFit.value = loadSetting("fitBoundary", "false") === "true";
+        var etFitWidth = numField(pFit, "Boundary width (0 = comp less safe margin):",
+            loadSetting("fitWidth", "0"), 70);
+        var etFitMax = numField(pFit, "Max font size (px):",
+            loadSetting("fitMaxFontSize", "260"));
+        var etFitTracking = numField(pFit, "Max tracking (0 = size only):",
+            loadSetting("fitMaxTracking", "120"));
+        var stFitNote = pFit.add("statictext", undefined,
+            "line spacing follows the fitted sizes, so Line height is ignored");
+        stFitNote.enabled = false;
+
         // ================= ANIMATE TAB =================
         var tAnim = tabs.add("tab", undefined, "Animate");
         tAnim.orientation = "column";
@@ -260,12 +476,28 @@
         var lbPreset = tAnim.add("listbox", undefined, presetNames);
         lbPreset.preferredSize.height = 180;
         lbPreset.selection = 0;
+        var stAnimNote = tAnim.add("statictext", undefined,
+            "colours, stroke and boxes live in the Type tab");
+        stAnimNote.enabled = false;
         var etPopScale = numField(tAnim, "Pop scale % (100 = no pop):",
             loadSetting("popScale", "112"));
-        var etActiveBox = colorField(tAnim, "Active box color:",
-            loadSetting("activeBoxColor", "#FF3B30"));
-        var etBoxRadius = numField(tAnim, "Box corner radius (px):",
-            loadSetting("boxRadius", "18"));
+
+        // ---- Slide In preset controls ----
+        var gSlide = section(tAnim, "Slide In");
+        var slideDial = angleDial(gSlide,
+            parseFloat(loadSetting("slideAngle", "0")) || 0);
+        var etSlideDistance = numField(gSlide, "Distance (px):",
+            loadSetting("slideDistance", "140"));
+        var etSlideDuration = numField(gSlide, "Duration (s):",
+            loadSetting("slideDuration", "0.35"));
+        var etSlideDolly = numField(gSlide, "Dolly (start scale offset %):",
+            loadSetting("slideDolly", "0"));
+        var etSlideEaseIn = numField(gSlide, "Ease in (0-100):",
+            loadSetting("slideEaseIn", "100"));
+        var etSlideEaseOut = numField(gSlide, "Ease out (0-100):",
+            loadSetting("slideEaseOut", "98"));
+        var cbSlideBlur = gSlide.add("checkbox", undefined, "Motion blur");
+        cbSlideBlur.value = loadSetting("slideMotionBlur", "true") === "true";
 
         tabs.selection = 0;
 
@@ -301,6 +533,19 @@
             var i = ddProv.selection ? ddProv.selection.index : 0;
             return state.providerIds[i];
         }
+        /* parseFloat with a fallback that survives a legitimate 0, which
+           the "or default" idiom would swallow. */
+        function num(text, fallback) {
+            var v = parseFloat(text);
+            return isNaN(v) ? fallback : v;
+        }
+        function shuffleVariants() {
+            var picked = [];
+            if (cbLookSolid.value) { picked.push("solid"); }
+            if (cbLookHighlight.value) { picked.push("highlight"); }
+            if (cbLookOutline.value) { picked.push("outline"); }
+            return picked;
+        }
         function gatherSettings() {
             var anchorIdx = ddAnchor.selection ? ddAnchor.selection.index : 0;
             var alignIdx = ddAlign.selection ? ddAlign.selection.index : 0;
@@ -312,14 +557,29 @@
                 lineHeight: parseFloat(etLineHeight.text) || 0,
                 wordSpacing: parseFloat(etWordSpacing.text) || 24,
                 wordsPerLine: parseInt(etWordsPerLine.text, 10) || 0,
+                minWordsPerLine: Math.max(1, parseInt(etMinWordsPerLine.text, 10) || 2),
                 charsPerLine: parseInt(etCharsPerLine.text, 10) || 0,
                 fauxBold: cbFauxBold.value,
+                fauxItalic: cbFauxItalic.value,
+                styleShuffle: cbShuffle.value,
+                shuffleVariants: shuffleVariants(),
+                shuffleFonts: KCF_splitList(etShuffleFonts.text),
+                shuffleSeed: num(etShuffleSeed.text, 0),
+                fill: cbFill.value,
                 fillColor: KCF_hexToRgb(etFill.text),
                 highlightColor: KCF_hexToRgb(etHighlight.text),
                 shadow: cbShadow.value,
                 stroke: cbStroke.value,
                 strokeColor: KCF_hexToRgb(etStrokeColor.text),
-                strokeWidth: parseFloat(etStrokeW.text) || 4,
+                strokeWidth: num(etStrokeW.text, 7),
+                strokePosition:
+                    (ddStrokePos.selection && ddStrokePos.selection.index === 1)
+                        ? "center" : "outer",
+                shadowColor: KCF_hexToRgb(etShadowColor.text),
+                shadowOpacity: num(etShadowOpacity.text, 60),
+                shadowDistance: num(etShadowDistance.text, 8),
+                shadowAngle: num(etShadowAngle.text, 135),
+                shadowSoftness: num(etShadowSoftness.text, 12),
                 backgroundBox: cbBox.value,
                 boxColor: KCF_hexToRgb(etBoxColor.text),
                 popScale: parseFloat(etPopScale.text) || 112,
@@ -327,10 +587,21 @@
                 boxRadius: parseFloat(etBoxRadius.text) || 0,
                 anchorPreset: ["bottom_center", "center", "top_center", "custom"][anchorIdx],
                 alignment: ["center", "left", "right"][alignIdx],
+                fitBoundary: cbFit.value,
+                fitWidth: num(etFitWidth.text, 0),
+                fitMaxFontSize: num(etFitMax.text, 260),
+                fitMaxTracking: num(etFitTracking.text, 120),
                 x: parseFloat(etX.text) || 960,
                 y: parseFloat(etY.text) || 1600,
                 verticalOffset: parseFloat(etVOffset.text) || 0,
                 safeMargin: parseFloat(etSafe.text) || 160,
+                slideAngle: slideDial.value(),
+                slideDistance: parseFloat(etSlideDistance.text) || 0,
+                slideDuration: parseFloat(etSlideDuration.text) || 0.35,
+                slideDolly: parseFloat(etSlideDolly.text) || 0,
+                slideEaseIn: parseFloat(etSlideEaseIn.text),
+                slideEaseOut: parseFloat(etSlideEaseOut.text),
+                slideMotionBlur: cbSlideBlur.value,
                 preset: KCF_PRESET_LABELS[presetIdx][0]
             };
         }
@@ -352,13 +623,54 @@
             saveSetting("fontSize", etFontSize.text);
             saveSetting("wordSpacing", etWordSpacing.text);
             saveSetting("wordsPerLine", etWordsPerLine.text);
+            saveSetting("minWordsPerLine", etMinWordsPerLine.text);
             saveSetting("charsPerLine", etCharsPerLine.text);
             saveSetting("fillColor", etFill.text);
             saveSetting("highlightColor", etHighlight.text);
+            saveSetting("minWords", etMinWords.text);
             saveSetting("maxWords", etMaxWords.text);
+            saveSetting("maxChars", etMaxChars.text);
+            saveSetting("pauseBreakSeconds", etPause.text);
+            saveSetting("minCaptionDuration", etMinDur.text);
+            saveSetting("maxCaptionDuration", etMaxDur.text);
+            saveSetting("removeCommasAndPeriods", cbRemoveCommasPeriods.value);
             saveSetting("popScale", etPopScale.text);
             saveSetting("activeBoxColor", etActiveBox.text);
             saveSetting("boxRadius", etBoxRadius.text);
+            saveSetting("slideAngle", slideDial.value());
+            saveSetting("slideDistance", etSlideDistance.text);
+            saveSetting("slideDuration", etSlideDuration.text);
+            saveSetting("slideDolly", etSlideDolly.text);
+            saveSetting("slideEaseIn", etSlideEaseIn.text);
+            saveSetting("slideEaseOut", etSlideEaseOut.text);
+            saveSetting("slideMotionBlur", cbSlideBlur.value);
+            saveSetting("fauxBold", cbFauxBold.value);
+            saveSetting("fauxItalic", cbFauxItalic.value);
+            saveSetting("fill", cbFill.value);
+            saveSetting("stroke", cbStroke.value);
+            saveSetting("strokeWidth", etStrokeW.text);
+            saveSetting("strokeColor", etStrokeColor.text);
+            saveSetting("strokePosition",
+                (ddStrokePos.selection && ddStrokePos.selection.index === 1)
+                    ? "center" : "outer");
+            saveSetting("backgroundBox", cbBox.value);
+            saveSetting("boxColor", etBoxColor.text);
+            saveSetting("shadow", cbShadow.value);
+            saveSetting("shadowColor", etShadowColor.text);
+            saveSetting("shadowOpacity", etShadowOpacity.text);
+            saveSetting("shadowDistance", etShadowDistance.text);
+            saveSetting("shadowAngle", etShadowAngle.text);
+            saveSetting("shadowSoftness", etShadowSoftness.text);
+            saveSetting("styleShuffle", cbShuffle.value);
+            saveSetting("shuffleSolid", cbLookSolid.value);
+            saveSetting("shuffleHighlight", cbLookHighlight.value);
+            saveSetting("shuffleOutline", cbLookOutline.value);
+            saveSetting("shuffleSeed", etShuffleSeed.text);
+            saveSetting("shuffleFonts", etShuffleFonts.text);
+            saveSetting("fitBoundary", cbFit.value);
+            saveSetting("fitWidth", etFitWidth.text);
+            saveSetting("fitMaxFontSize", etFitMax.text);
+            saveSetting("fitMaxTracking", etFitTracking.text);
         }
 
         // ---- handlers ----
@@ -479,11 +791,13 @@
                 provider: providerId(),
                 providerOptions: providerOptions,
                 grouping: {
+                    minWords: parseInt(etMinWords.text, 10) || 2,
                     maxWords: parseInt(etMaxWords.text, 10) || 4,
                     maxChars: parseInt(etMaxChars.text, 10) || 42,
                     pauseBreakSeconds: parseFloat(etPause.text) || 0.55,
                     minCaptionDuration: parseFloat(etMinDur.text) || 0.5,
-                    maxCaptionDuration: parseFloat(etMaxDur.text) || 3.5
+                    maxCaptionDuration: parseFloat(etMaxDur.text) || 3.5,
+                    removeCommasAndPeriods: cbRemoveCommasPeriods.value
                 }
             };
             try {
@@ -541,15 +855,30 @@
             status("Removed " + n + " generated precomp(s).");
         };
 
-        // ---- scrolling ----
+        /* ---- scrolling ----
+           ScriptUI has no scrollable container, so the scrollbar shifts
+           content.location.y and the window clips what hangs out.
+
+           The catch: layout.resize() clamps content.size down to the
+           viewport, so measuring content.size reports zero overflow while
+           the controls below it are quietly cut off — the scrollbar then
+           hides itself exactly when it is needed. preferredSize is the
+           height the content actually asked for, so measure that and pin
+           the group to it. */
         function updateScroll() {
-            if (!scroller.size || !content.size) { return; }
-            var overflow = content.size.height - scroller.size.height;
+            if (!scroller.size) { return; }
+            var wanted = content.preferredSize.height;
+            var viewport = scroller.size.height;
+            if (wanted <= 0 || viewport <= 0) { return; }
+            if (content.size.height < wanted) {
+                content.size.height = wanted;      // undo the clamp
+            }
+            var overflow = wanted - viewport;
             if (overflow > 0) {
                 sbScroll.visible = true;
                 sbScroll.minvalue = 0;
                 sbScroll.maxvalue = overflow;
-                sbScroll.jumpdelta = Math.max(20, scroller.size.height - 40);
+                sbScroll.jumpdelta = Math.max(20, viewport - 40);
                 if (sbScroll.value > overflow) { sbScroll.value = overflow; }
             } else {
                 sbScroll.visible = false;
@@ -566,14 +895,25 @@
             this.layout.resize();
             updateScroll();
         };
+        // sizes are only real once AE has shown the panel
+        win.onShow = function () { updateScroll(); };
         win.layout.layout(true);
         win.layout.resize();
-        updateScroll();
         if (win instanceof Window) {
+            /* Sizing to content would now open a window taller than the
+               display; cap it and let the scrollbar reach the rest. */
+            var roomy = 900;
+            try {
+                roomy = Math.max(420, $.screens[0].bottom - $.screens[0].top - 140);
+            } catch (eScreen) { /* no screen metrics available */ }
+            if (win.size.height > roomy) {
+                win.size.height = roomy;
+                win.layout.resize();
+            }
             win.center();
             win.show();
-            updateScroll();
         }
+        updateScroll();
         return win;
     }
 

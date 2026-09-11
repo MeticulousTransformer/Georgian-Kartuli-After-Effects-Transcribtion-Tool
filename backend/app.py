@@ -53,11 +53,13 @@ app.add_middleware(
 
 
 class GroupingModel(BaseModel):
+    minWords: int = 2
     maxWords: int = 4
     maxChars: int = 42
     pauseBreakSeconds: float = 0.55
     minCaptionDuration: float = 0.5
     maxCaptionDuration: float = 3.5
+    removeCommasAndPeriods: bool = False
 
 
 class ExtractRequest(BaseModel):
