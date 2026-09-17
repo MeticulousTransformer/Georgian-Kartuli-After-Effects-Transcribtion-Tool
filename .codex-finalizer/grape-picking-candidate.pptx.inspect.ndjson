@@ -1,0 +1,79 @@
+{"kind":"deck","id":"pr/mqc9n4","name":"Deck"}
+{"kind":"layout","layoutId":"b243af94-ed86-4bee-a91f-2006bd1b4a32","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"dc7284e0-528b-4e9a-8f2b-0451a68e4cbb","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/hhsw6f","slide":1,"title":"Grape Picking","textShapes":7}
+{"kind":"shape","id":"sh/cjmx4fil","slide":1,"bbox":[72,105,180,4]}
+{"kind":"textbox","id":"sh/bidgbah0","slide":1,"text":"Grape Picking","textPreview":"Grape Picking","textChars":13,"textLines":1,"bbox":[72,150,790,88]}
+{"kind":"textbox","id":"sh/qh4f250f","slide":1,"text":"Film reference directions","textPreview":"Film reference directions","textChars":25,"textLines":1,"bbox":[76,250,560,42]}
+{"kind":"textbox","id":"sh/l8fyhkz2","slide":1,"text":"A compact reading of four supplied references for a grape-harvest film.","textPreview":"A compact reading of four supplied references for a grape-harvest film.","textChars":71,"textLines":1,"bbox":[76,334,640,70]}
+{"kind":"textbox","id":"sh/0nmx8fih","slide":1,"text":"WORKERS / RHYTHM / WINE","textPreview":"WORKERS / RHYTHM / WINE","textChars":23,"textLines":1,"bbox":[76,566,580,25]}
+{"kind":"textbox","id":"sh/zmdgfuhw","slide":1,"text":"Selected video and campaign references","textPreview":"Selected video and campaign references","textChars":38,"textLines":1,"bbox":[76,605,520,24]}
+{"kind":"textbox","id":"sh/yl4f6p0r","slide":1,"text":"GRAPE PICKING / REFERENCE NOTES / 01","textPreview":"GRAPE PICKING / REFERENCE NOTES / 01","textChars":36,"textLines":1,"bbox":[72,678,700,18]}
+{"kind":"textbox","id":"sh/9cfyl4ze","slide":1,"text":"Source: videos.md","textPreview":"Source: videos.md","textChars":17,"textLines":1,"bbox":[1010,678,198,18]}
+{"kind":"notes","id":"nt/hhsw6f","slide":1,"text":"Source: F:/GrapePicking/videos.md. No external factual claims added."}
+{"kind":"slide","id":"sl/81r15w","slide":2,"title":"The strongest reference","textShapes":9}
+{"kind":"textbox","id":"sh/4jy94zy9","slide":2,"text":"The strongest reference","textPreview":"The strongest reference","textChars":23,"textLines":1,"bbox":[72,64,620,42]}
+{"kind":"shape","id":"sh/jip8vuxo","slide":2,"bbox":[72,122,310,4]}
+{"kind":"textbox","id":"sh/ihgr2pgj","slide":2,"text":"Champagne, France\nLaura Naylor","textPreview":"Champagne, France | Laura Naylor","textChars":30,"textLines":2,"bbox":[72,166,515,100]}
+{"kind":"textbox","id":"sh/hg7qtkfy","slide":2,"text":"Feature-length cinéma-vérité documentary following the same harvest workers as they return each year.","textPreview":"Feature-length cinéma-vérité documentary following the same harvest workers as they return each year.","textChars":101,"textLines":1,"bbox":[72,306,560,110]}
+{"kind":"textbox","id":"sh/wfy90zyd","slide":2,"text":"The human relationships carry the film.","textPreview":"The human relationships carry the film.","textChars":39,"textLines":1,"bbox":[72,482,570,44]}
+{"kind":"textbox","id":"sh/vep8ruxs","slide":2,"text":"Bodies, fatigue, banter, social class, shared meals and sleeping arrangements create a temporary working community.","textPreview":"Bodies, fatigue, banter, social class, shared meals and sleeping arrangements create a temporary working community.","textChars":115,"textLines":1,"bbox":[705,185,455,250]}
+{"kind":"textbox","id":"sh/udgrypg7","slide":2,"text":"Vimeo reference","textPreview":"Vimeo reference","textChars":15,"textLines":1,"bbox":[705,500,240,24]}
+{"kind":"textbox","id":"sh/9c7qpkfm","slide":2,"text":"Open on Vimeo: vimeo.com/293392791","textPreview":"Open on Vimeo: vimeo.com/293392791","textChars":34,"textLines":1,"bbox":[705,532,400,28]}
+{"kind":"textbox","id":"sh/8be9wfy1","slide":2,"text":"GRAPE PICKING / REFERENCE NOTES / 02","textPreview":"GRAPE PICKING / REFERENCE NOTES / 02","textChars":36,"textLines":1,"bbox":[72,678,700,18]}
+{"kind":"textbox","id":"sh/u90zuxkr","slide":2,"text":"Source: videos.md","textPreview":"Source: videos.md","textChars":17,"textLines":1,"bbox":[1010,678,198,18]}
+{"kind":"notes","id":"nt/81r15w","slide":2,"text":"Source: videos.md, Vimeo reference https://vimeo.com/293392791. Description paraphrases the supplied note."}
+{"kind":"slide","id":"sl/huv23i","slide":3,"title":"Reference links","textShapes":9}
+{"kind":"textbox","id":"sh/7u147e1o","slide":3,"text":"Reference links","textPreview":"Reference links","textChars":15,"textLines":1,"bbox":[72,64,620,48]}
+{"kind":"shape","id":"sh/8valgj2t","slide":3,"bbox":[72,128,310,4]}
+{"kind":"textbox","id":"sh/twjm9oje","slide":3,"text":"Open any title below to watch or review the original source.","textPreview":"Open any title below to watch or review the original source.","textChars":60,"textLines":1,"bbox":[72,174,850,32]}
+{"kind":"textbox","id":"sh/yp83a9kr","slide":3,"text":"Champagne, France — Laura Naylor / Vimeo","textPreview":"Champagne, France — Laura Naylor / Vimeo","textChars":40,"textLines":1,"bbox":[72,250,800,34]}
+{"kind":"textbox","id":"sh/jqh43e1c","slide":3,"text":"Visual reference / Vimeo","textPreview":"Visual reference / Vimeo","textChars":24,"textLines":1,"bbox":[72,325,800,34]}
+{"kind":"textbox","id":"sh/kralcj2x","slide":3,"text":"INNISKILLIN: The Original Startup / Ads of the World","textPreview":"INNISKILLIN: The Original Startup / Ads of the World","textChars":52,"textLines":1,"bbox":[72,400,940,34]}
+{"kind":"textbox","id":"sh/lsjm5oji","slide":3,"text":"Harvest and pouring story / Vimeo","textPreview":"Harvest and pouring story / Vimeo","textChars":33,"textLines":1,"bbox":[72,475,800,34]}
+{"kind":"textbox","id":"sh/ilc3mtkb","slide":3,"text":"All links supplied in videos.md","textPreview":"All links supplied in videos.md","textChars":31,"textLines":1,"bbox":[72,555,450,25]}
+{"kind":"textbox","id":"sh/3ml4fy1w","slide":3,"text":"GRAPE PICKING / REFERENCE NOTES / 06","textPreview":"GRAPE PICKING / REFERENCE NOTES / 06","textChars":36,"textLines":1,"bbox":[72,678,700,18]}
+{"kind":"textbox","id":"sh/fyh8vu50","slide":3,"text":"Source: videos.md","textPreview":"Source: videos.md","textChars":17,"textLines":1,"bbox":[1010,678,198,18]}
+{"kind":"notes","id":"nt/huv23i","slide":3,"text":"Source links copied from F:/GrapePicking/videos.md."}
+{"kind":"slide","id":"sl/9ruh22","slide":4,"title":"Visual language","textShapes":13}
+{"kind":"textbox","id":"sh/0369knmx","slide":4,"text":"Visual language","textPreview":"Visual language","textChars":15,"textLines":1,"bbox":[72,64,510,48]}
+{"kind":"shape","id":"sh/z2d8bi5s","slide":4,"bbox":[72,128,320,4]}
+{"kind":"textbox","id":"sh/y14rix47","slide":4,"text":"Observe the work at human scale","textPreview":"Observe the work at human scale","textChars":31,"textLines":1,"bbox":[72,177,570,45]}
+{"kind":"textbox","id":"sh/d0vq9snm","slide":4,"text":"Faces","textPreview":"Faces","textChars":5,"textLines":1,"bbox":[72,292,220,38]}
+{"kind":"textbox","id":"sh/czm9gnm1","slide":4,"text":"Hands","textPreview":"Hands","textChars":5,"textLines":1,"bbox":[365,292,220,38]}
+{"kind":"textbox","id":"sh/byd87i5g","slide":4,"text":"Silhouettes","textPreview":"Silhouettes","textChars":11,"textLines":1,"bbox":[658,292,220,38]}
+{"kind":"textbox","id":"sh/qx4red4v","slide":4,"text":"Repetition","textPreview":"Repetition","textChars":10,"textLines":1,"bbox":[951,292,220,38]}
+{"kind":"textbox","id":"sh/pwvq58na","slide":4,"text":"Expressions and small exchanges","textPreview":"Expressions and small exchanges","textChars":31,"textLines":1,"bbox":[72,350,205,70]}
+{"kind":"textbox","id":"sh/ovmpc3m5","slide":4,"text":"Touch, tools and stained skin","textPreview":"Touch, tools and stained skin","textChars":29,"textLines":1,"bbox":[365,350,205,70]}
+{"kind":"textbox","id":"sh/6tsbi94j","slide":4,"text":"Workers within the vineyard landscape","textPreview":"Workers within the vineyard landscape","textChars":37,"textLines":1,"bbox":[658,350,205,70]}
+{"kind":"textbox","id":"sh/7u1sbel4","slide":4,"text":"The physical pattern of picking","textPreview":"The physical pattern of picking","textChars":31,"textLines":1,"bbox":[951,350,205,70]}
+{"kind":"textbox","id":"sh/svutkzm9","slide":4,"text":"Use restraint. Avoid heroic advertising clichés about hard work.","textPreview":"Use restraint. Avoid heroic advertising clichés about hard work.","textChars":64,"textLines":1,"bbox":[72,525,990,42]}
+{"kind":"textbox","id":"sh/tw3ud43u","slide":4,"text":"GRAPE PICKING / REFERENCE NOTES / 03","textPreview":"GRAPE PICKING / REFERENCE NOTES / 03","textChars":36,"textLines":1,"bbox":[72,678,700,18]}
+{"kind":"textbox","id":"sh/ipsbep47","slide":4,"text":"Source: videos.md","textPreview":"Source: videos.md","textChars":17,"textLines":1,"bbox":[1010,678,198,18]}
+{"kind":"notes","id":"nt/9ruh22","slide":4,"text":"Source: videos.md, Vimeo reference https://vimeo.com/1050552369. The visual-language wording follows the supplied note."}
+{"kind":"slide","id":"sl/1v9jak","slide":5,"title":"Two storytelling routes","textShapes":9}
+{"kind":"textbox","id":"sh/ylo7qxof","slide":5,"text":"Two storytelling routes","textPreview":"Two storytelling routes","textChars":23,"textLines":1,"bbox":[72,64,650,48]}
+{"kind":"shape","id":"sh/lof61cn6","slide":5,"bbox":[72,128,310,4]}
+{"kind":"textbox","id":"sh/kn6ps76l","slide":5,"text":"The harvest","textPreview":"The harvest","textChars":11,"textLines":1,"bbox":[72,184,420,45]}
+{"kind":"textbox","id":"sh/7axo3m5w","slide":5,"text":"An ordinary story of picking and the words around pouring wine. The supplied reference points to a 1:22 treatment.","textPreview":"An ordinary story of picking and the words around pouring wine. The supplied reference points to a 1:22 treatment.","textChars":114,"textLines":1,"bbox":[72,250,485,150]}
+{"kind":"textbox","id":"sh/69o7uhob","slide":5,"text":"The wine brand","textPreview":"The wine brand","textChars":14,"textLines":1,"bbox":[695,184,420,45]}
+{"kind":"textbox","id":"sh/tcz65cn2","slide":5,"text":"INNISKILLIN tells a wine success story in one minute. The supplied note says this reference is less about the harvest itself.","textPreview":"INNISKILLIN tells a wine success story in one minute. The supplied note says this reference is less about the harvest itself.","textChars":125,"textLines":1,"bbox":[695,250,485,150]}
+{"kind":"textbox","id":"sh/8bqpwr6h","slide":5,"text":"Useful decision","textPreview":"Useful decision","textChars":15,"textLines":1,"bbox":[72,490,260,34]}
+{"kind":"textbox","id":"sh/veho7m58","slide":5,"text":"Let the workers and the picking lead. Let wine remain the outcome, not the protagonist.","textPreview":"Let the workers and the picking lead. Let wine remain the outcome, not the protagonist.","textChars":87,"textLines":1,"bbox":[72,540,1020,48]}
+{"kind":"textbox","id":"sh/ud87yhon","slide":5,"text":"GRAPE PICKING / REFERENCE NOTES / 04","textPreview":"GRAPE PICKING / REFERENCE NOTES / 04","textChars":36,"textLines":1,"bbox":[72,678,700,18]}
+{"kind":"textbox","id":"sh/k3e9wbi1","slide":5,"text":"Source: videos.md","textPreview":"Source: videos.md","textChars":17,"textLines":1,"bbox":[1010,678,198,18]}
+{"kind":"notes","id":"nt/1v9jak","slide":5,"text":"Sources: videos.md, https://www.adsoftheworld.com/campaigns/the-original-startup and https://vimeo.com/1089436364. The final line is a proposed working direction inferred from the supplied reference notes."}
+{"kind":"slide","id":"sl/tn8wav","slide":6,"title":"Working film direction","textShapes":11}
+{"kind":"textbox","id":"sh/mxwrydcz","slide":6,"text":"Working film direction","textPreview":"Working film direction","textChars":22,"textLines":1,"bbox":[72,64,620,48]}
+{"kind":"shape","id":"sh/907at8ba","slide":6,"bbox":[72,128,310,4]}
+{"kind":"textbox","id":"sh/8ze90nup","slide":6,"text":"A harvest story built from people, physical rhythm and the shared life around the work.","textPreview":"A harvest story built from people, physical rhythm and the shared life around the work.","textChars":87,"textLines":1,"bbox":[72,180,975,72]}
+{"kind":"textbox","id":"sh/za58nyt8","slide":6,"text":"OPEN","textPreview":"OPEN","textChars":4,"textLines":1,"bbox":[72,330,150,30]}
+{"kind":"textbox","id":"sh/y9wrutcn","slide":6,"text":"Faces and first movements in the vines","textPreview":"Faces and first movements in the vines","textChars":38,"textLines":1,"bbox":[72,374,270,84]}
+{"kind":"textbox","id":"sh/lwnqp8be","slide":6,"text":"MIDDLE","textPreview":"MIDDLE","textChars":6,"textLines":1,"bbox":[410,330,150,30]}
+{"kind":"textbox","id":"sh/0ve9w3ut","slide":6,"text":"Hands, repetition, fatigue and banter","textPreview":"Hands, repetition, fatigue and banter","textChars":37,"textLines":1,"bbox":[410,374,270,84]}
+{"kind":"textbox","id":"sh/b6l8jytc","slide":6,"text":"CLOSE","textPreview":"CLOSE","textChars":5,"textLines":1,"bbox":[748,330,150,30]}
+{"kind":"textbox","id":"sh/q5crqtcr","slide":6,"text":"The group together, then wine as the result","textPreview":"The group together, then wine as the result","textChars":43,"textLines":1,"bbox":[748,374,320,84]}
+{"kind":"textbox","id":"sh/sb658jih","slide":6,"text":"Keep the camera close enough to feel the work, quiet enough to let the people speak for themselves.","textPreview":"Keep the camera close enough to feel the work, quiet enough to let the people speak for themselves.","textChars":99,"textLines":1,"bbox":[72,546,1030,45]}
+{"kind":"textbox","id":"sh/dcf6hoj2","slide":6,"text":"GRAPE PICKING / REFERENCE NOTES / 05","textPreview":"GRAPE PICKING / REFERENCE NOTES / 05","textChars":36,"textLines":1,"bbox":[72,678,700,18]}
+{"kind":"textbox","id":"sh/q94n690b","slide":6,"text":"Source: videos.md","textPreview":"Source: videos.md","textChars":17,"textLines":1,"bbox":[1010,678,198,18]}
+{"kind":"notes","id":"nt/tn8wav","slide":6,"text":"Proposed edit map inferred from the supplied reference notes. It introduces no unverified production facts."}
