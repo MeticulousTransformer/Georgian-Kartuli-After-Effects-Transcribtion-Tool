@@ -23,6 +23,11 @@ def find_ffmpeg() -> Optional[str]:
     for cand in FFMPEG_CANDIDATES:
         if os.path.isfile(cand):
             return cand
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except (ImportError, RuntimeError):
+        pass
     return None
 
 
@@ -31,9 +36,7 @@ def extract_audio(media_path: str, out_dir: str) -> str:
     ffmpeg = find_ffmpeg()
     if not ffmpeg:
         raise RuntimeError(
-            "ffmpeg not found. Install it: 'brew install ffmpeg' (macOS), "
-            "'sudo apt install ffmpeg' (Linux), 'winget install ffmpeg' or "
-            "download from ffmpeg.org and add to PATH (Windows)."
+            "Audio preparation is unavailable. Run the CapForge installer again to repair the local service."
         )
     if not os.path.isfile(media_path):
         raise RuntimeError(f"Media file not found: {media_path}")

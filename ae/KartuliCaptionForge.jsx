@@ -1,4 +1,4 @@
-/* Kartuli Caption Forge — dockable After Effects panel.
+/* CapForge — dockable After Effects panel.
    Georgian/English word-timed caption animator.
 
    Install: copy KartuliCaptionForge.jsx AND the lib/ folder into
@@ -10,7 +10,11 @@
 #include "lib/text_measure.jsx"
 #include "lib/style_shuffle.jsx"
 #include "lib/presets.jsx"
+#include "lib/title_registry.jsx"
 #include "lib/layer_builder.jsx"
+
+var KCF_BACKEND_ROOT = new File($.fileName).parent.parent.fsName + "/backend";
+KCF_loadTitles(new Folder(new File($.fileName).parent.fsName + "/titles"));
 
 (function KartuliCaptionForge(thisObj) {
 
@@ -44,7 +48,7 @@
 
     function buildUI(thisObj) {
         var win = (thisObj instanceof Panel) ? thisObj
-            : new Window("palette", "Kartuli Caption Forge", undefined,
+            : new Window("palette", "CapForge", undefined,
                          { resizeable: true });
         win.orientation = "column";
         win.alignChildren = ["fill", "fill"];
@@ -370,6 +374,7 @@
         var cbBox = pBg.add("checkbox", undefined, "Background box");
         cbBox.value = loadSetting("backgroundBox", "false") === "true";
         var etBoxColor = colorField(pBg, "Color:", loadSetting("boxColor", "#000000"));
+        var etBoxOpacity = numField(pBg, "Opacity (%):", loadSetting("boxOpacity", "100"));
         var etActiveBox = colorField(pBg, "Active word box:",
             loadSetting("activeBoxColor", "#FF3B30"));
         var etBoxRadius = numField(pBg, "Corner radius (px):",
@@ -582,6 +587,7 @@
                 shadowSoftness: num(etShadowSoftness.text, 12),
                 backgroundBox: cbBox.value,
                 boxColor: KCF_hexToRgb(etBoxColor.text),
+                boxOpacity: Math.max(0, Math.min(100, num(etBoxOpacity.text, 100))),
                 popScale: parseFloat(etPopScale.text) || 112,
                 activeBoxColor: KCF_hexToRgb(etActiveBox.text),
                 boxRadius: parseFloat(etBoxRadius.text) || 0,
@@ -655,6 +661,7 @@
                     ? "center" : "outer");
             saveSetting("backgroundBox", cbBox.value);
             saveSetting("boxColor", etBoxColor.text);
+            saveSetting("boxOpacity", etBoxOpacity.text);
             saveSetting("shadow", cbShadow.value);
             saveSetting("shadowColor", etShadowColor.text);
             saveSetting("shadowOpacity", etShadowOpacity.text);
@@ -791,7 +798,8 @@
                 provider: providerId(),
                 providerOptions: providerOptions,
                 grouping: {
-                    minWords: parseInt(etMinWords.text, 10) || 2,
+                    minWords: Math.min(parseInt(etMinWords.text, 10) || 2,
+                        Math.max(1, parseInt(etMaxWords.text, 10) || 4)),
                     maxWords: parseInt(etMaxWords.text, 10) || 4,
                     maxChars: parseInt(etMaxChars.text, 10) || 42,
                     pauseBreakSeconds: parseFloat(etPause.text) || 0.55,

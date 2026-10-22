@@ -1,5 +1,12 @@
 # AGENT.md — Georgian/English Word-Timed Caption Animator for After Effects
 
+## Agent entry point
+
+Read `agents/README.md` before changing the product. `agents/ARCHITECTURE.md`
+maps the modern CEP panel, the original ScriptUI panel, the caption engine and
+installer. Follow `agents/ADD_TITLE.md` to add a removable title style.
+Keep modules independent and preserve the normalized word timeline.
+
 ## Mission
 
 Build a macOS-friendly After Effects caption tool that transcribes Georgian and English speech, produces word-level timestamps, groups words into short sentence chunks, and generates animated word-by-word text layers in After Effects.
@@ -13,7 +20,7 @@ The tool must be modular, testable, and provider-swappable. Do not hard-code one
 
 ## Product Name
 
-Working name: **Kartuli Caption Forge**
+Working name: **CapForge**
 
 ---
 
@@ -480,7 +487,7 @@ KCF_Captions_YYYYMMDD_HHMMSS
 Create a folder in AE project:
 
 ```txt
-Kartuli Caption Forge
+CapForge
 ```
 
 For each caption chunk, generate one caption group.
@@ -780,7 +787,7 @@ Each generated layer should store metadata in comment if possible:
 
 ```json
 {
-  "tool": "Kartuli Caption Forge",
+  "tool": "CapForge",
   "captionId": 0,
   "wordId": 12,
   "start": 1.24,

@@ -1,0 +1,9 @@
+/* Rename the file to .jsx and replace this ID/label before installation. */
+KCF_registerTitle("my_title", "My Title", function (layer, word, caption, style, basePos) {
+    var start = word.start;
+    var end = Math.min(start + 0.2, caption.end);
+    layer.inPoint = start;
+    layer.outPoint = caption.end;
+    KCF_setKeys(KCF_prop(layer, "Opacity"), [start, end], [0, 100], false);
+    // The layer builder has already positioned the word at basePos.
+});

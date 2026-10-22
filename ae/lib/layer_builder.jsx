@@ -1,8 +1,8 @@
 /* AE layer generation from a normalized TranscriptDocument.
    Never destroys user work: everything goes into a fresh precomp inside
-   the "Kartuli Caption Forge" project folder. */
+   the "CapForge" project folder. */
 
-var KCF_FOLDER_NAME = "Kartuli Caption Forge";
+var KCF_FOLDER_NAME = "CapForge";
 
 /* Rounded-rectangle shape layer (solids can't have corner radius).
    Positioned by its center, like a solid. */
@@ -317,7 +317,7 @@ function KCF_buildCaption(precomp, doc, caption, ci, settings, pos, shuffler) {
             lyr.property("Transform").property("Position").setValue(basePos);
             lyr.name = "KCF_C" + KCF_pad3(ci) + "_W" + KCF_pad3(idx) + "_" + w.text;
             lyr.comment = JSON.stringify({
-                tool: "Kartuli Caption Forge",
+                tool: "CapForge",
                 captionId: caption.id,
                 wordId: w.id,
                 start: w.start,
@@ -356,6 +356,10 @@ function KCF_buildCaption(precomp, doc, caption, ci, settings, pos, shuffler) {
             baseY + top + (blockHeight + maxH) / 2);
         box.inPoint = caption.start;
         box.outPoint = Math.max(caption.end, caption.start + 0.05);
+        // Old looks keep their solid box. Explicit 0 is fully transparent.
+        var boxOpacity = settings.boxOpacity;
+        if (typeof boxOpacity !== "number" || !isFinite(boxOpacity)) { boxOpacity = 100; }
+        KCF_prop(box, "Opacity").setValue(Math.max(0, Math.min(100, boxOpacity)));
         // layers[0] was created first, so it is the bottom-most text layer;
         // placing the box after it puts the box below ALL caption text
         box.moveAfter(layers[0]);

@@ -1,4 +1,4 @@
-"""Kartuli Caption Forge — local backend.
+"""CapForge — local backend.
 
 Run:  python backend/app.py   (or: cd backend && python app.py)
 Serves http://127.0.0.1:8765 for the After Effects panel.
@@ -8,10 +8,13 @@ from __future__ import annotations
 import json
 import os
 import sys
+import uuid
+import secrets
+from threading import Lock
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-VERSION = "0.1.0"
+VERSION = "0.3.1"
 BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 EXPORTS_DIR = os.path.join(os.path.dirname(BACKEND_DIR), "exports")
 
@@ -35,31 +38,69 @@ def load_env() -> None:
 
 load_env()
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from fastapi.exceptions import RequestValidationError
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.responses import JSONResponse
+from pydantic import BaseModel, Field, model_validator
 
 from services.audio_extract import extract_audio, find_ffmpeg, wav_duration
 from services.grouping import GroupingOptions, group_words
 from services.local_scan import scan_local
-from services.models import build_document
+from services.models import Word, build_document
+from services.studio_settings import local_token, save_provider_key
+from services.transcript_validation import validate_document
 from services.provider_registry import available_ids, get_provider, list_infos
 from providers.base import ProviderError
 
-app = FastAPI(title="Kartuli Caption Forge Backend", version=VERSION)
+PANEL_ORIGINS = ["null", "file://"]
+
+app = FastAPI(title="CapForge Backend", version=VERSION)
 app.add_middleware(
-    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
+    CORSMiddleware, allow_origins=PANEL_ORIGINS, allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "X-KCF-Token"]
 )
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"])
+
+
+@app.exception_handler(RequestValidationError)
+async def invalid_request(request: Request, error: RequestValidationError):
+    # Pydantic's default validation output includes input values, including keys.
+    issues = [{"loc": item["loc"], "msg": item["msg"]} for item in error.errors()]
+    return JSONResponse(status_code=422, content={"detail": "Check the request values.", "issues": issues})
+
+
+@app.middleware("http")
+async def protect_local_service(request: Request, call_next):
+    # CEP can send either file:// or null for its installed panel. Neither
+    # identifies CapForge: the installation token still protects private APIs.
+    origin = request.headers.get("origin")
+    if origin is not None and origin not in PANEL_ORIGINS:
+        return JSONResponse(status_code=403, content={"detail": "This service only accepts the installed CapForge panel."})
+    size = request.headers.get("content-length", "0")
+    if not size.isdigit() or int(size) > 12 * 1024 * 1024:
+        return JSONResponse(status_code=413, content={"detail": "Request must be smaller than 12 MB."})
+    if request.method != "OPTIONS" and request.url.path != "/health":
+        if not secrets.compare_digest(request.headers.get("x-kcf-token", ""), local_token(BACKEND_DIR)):
+            return JSONResponse(status_code=401, content={"detail": "Panel authorization missing. Start the installed service and check the connection in Setup."})
+    return await call_next(request)
 
 
 class GroupingModel(BaseModel):
-    minWords: int = 2
-    maxWords: int = 4
-    maxChars: int = 42
-    pauseBreakSeconds: float = 0.55
-    minCaptionDuration: float = 0.5
-    maxCaptionDuration: float = 3.5
+    minWords: int = Field(default=2, ge=1, le=6)
+    maxWords: int = Field(default=4, ge=1, le=6)
+    maxChars: int = Field(default=42, ge=4, le=200)
+    pauseBreakSeconds: float = Field(default=0.55, ge=0.1, le=5)
+    minCaptionDuration: float = Field(default=0.5, ge=0, le=10)
+    maxCaptionDuration: float = Field(default=3.5, ge=0.1, le=30)
     removeCommasAndPeriods: bool = False
+
+    @model_validator(mode="after")
+    def ordered_limits(self):
+        if self.minWords > self.maxWords or self.minCaptionDuration > self.maxCaptionDuration:
+            raise ValueError("Minimum grouping values cannot exceed maximums.")
+        return self
 
 
 class ExtractRequest(BaseModel):
@@ -72,6 +113,24 @@ class TranscribeRequest(BaseModel):
     provider: str = "elevenlabs"
     providerOptions: dict = Field(default_factory=dict)
     grouping: GroupingModel = Field(default_factory=GroupingModel)
+
+
+class RegroupRequest(BaseModel):
+    document: dict
+    grouping: GroupingModel = Field(default_factory=GroupingModel)
+
+
+class ProviderKeyRequest(BaseModel):
+    name: str
+    value: str = Field(min_length=1, max_length=2048, repr=False)
+    region: str | None = None
+
+
+_transcription_lock = Lock()
+
+
+def _run_exports() -> str:
+    return os.path.join(EXPORTS_DIR, "runs", str(uuid.uuid4()))
 
 
 def _save_json(path: str, data) -> str:
@@ -87,7 +146,7 @@ def health():
         "ok": True,
         "version": VERSION,
         "availableProviders": available_ids(),
-        "ffmpeg": find_ffmpeg(),
+        "ffmpeg": bool(find_ffmpeg()),
     }
 
 
@@ -99,7 +158,7 @@ def providers():
 @app.post("/extract_audio")
 def extract(req: ExtractRequest):
     try:
-        wav = extract_audio(req.mediaPath, EXPORTS_DIR)
+        wav = extract_audio(req.mediaPath, _run_exports())
         return {"audio": wav, "duration": wav_duration(wav)}
     except RuntimeError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -107,6 +166,15 @@ def extract(req: ExtractRequest):
 
 @app.post("/transcribe")
 def transcribe(req: TranscribeRequest):
+    if not _transcription_lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="A transcription is already running. Wait for it to finish.")
+    try:
+        return _transcribe(req)
+    finally:
+        _transcription_lock.release()
+
+
+def _transcribe(req: TranscribeRequest):
     if not os.path.isfile(req.mediaPath):
         raise HTTPException(status_code=400, detail=f"Media file not found: {req.mediaPath}")
 
@@ -117,8 +185,9 @@ def transcribe(req: TranscribeRequest):
     if not ok:
         raise HTTPException(status_code=400, detail=f"Provider unavailable: {detail}.")
 
+    run_dir = _run_exports()
     try:
-        wav = extract_audio(req.mediaPath, EXPORTS_DIR)
+        wav = extract_audio(req.mediaPath, run_dir)
     except RuntimeError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -126,11 +195,11 @@ def transcribe(req: TranscribeRequest):
         result = provider.transcribe(wav, req.language, req.providerOptions)
     except ProviderError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"{provider.id} failed: {e}")
+    except Exception:
+        raise HTTPException(status_code=500, detail=f"{provider.id} could not complete transcription. Check its configuration and try again.")
 
     raw_path = _save_json(
-        os.path.join(EXPORTS_DIR, f"raw_{provider.id}.json"), result.raw
+        os.path.join(run_dir, f"raw_{provider.id}.json"), result.raw
     )
 
     opts = GroupingOptions.from_dict(req.grouping.model_dump())
@@ -145,7 +214,7 @@ def transcribe(req: TranscribeRequest):
         words=result.words,
         captions=captions,
     )
-    normalized_path = _save_json(os.path.join(EXPORTS_DIR, "normalized.json"), document)
+    normalized_path = _save_json(os.path.join(run_dir, "normalized.json"), document)
 
     warnings = list(result.warnings)
     if result.timing_quality != "word":
@@ -166,9 +235,36 @@ def transcribe(req: TranscribeRequest):
     }
 
 
+@app.post("/regroup")
+def regroup(req: RegroupRequest):
+    try:
+        document = validate_document(req.document)
+        words = [Word(**{key: value for key, value in word.items() if key in Word.__dataclass_fields__}) for word in document["words"]]
+        captions = group_words(words, GroupingOptions.from_dict(req.grouping.model_dump()))
+        document["words"] = [word.to_dict() for word in words]
+        document["captions"] = [caption.to_dict() for caption in captions]
+        return {"document": document}
+    except (ValueError, TypeError) as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@app.post("/settings/provider-key")
+def provider_key(req: ProviderKeyRequest):
+    if not _transcription_lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="Save provider keys after the current transcription finishes.")
+    try:
+        save_provider_key(BACKEND_DIR, req.name, req.value, req.region)
+        return {"ok": True}
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    finally:
+        _transcription_lock.release()
+
+
 if __name__ == "__main__":
     import uvicorn
 
     port = int(os.environ.get("KCF_PORT", "8765"))
-    print(f"Kartuli Caption Forge backend v{VERSION} -> http://127.0.0.1:{port}")
+    local_token(BACKEND_DIR)
+    print(f"CapForge backend v{VERSION} -> http://127.0.0.1:{port}")
     uvicorn.run(app, host="127.0.0.1", port=port)

@@ -1,0 +1,9 @@
+/* Change the studio's visual identity here. No typography/CDN dependency. */
+:root {
+  --bg: #14151b; --surface: #1b1d25; --raised: #242733; --input: #171922;
+  --line: #363a4a; --line-soft: #2b2e3b; --text: #f0f1f8; --muted: #acafc0;
+  --accent: #b4a5ff; --accent-ink: #1c1638; --accent-soft: #30294c;
+  --accent-hover: #c8bdff; --accent-line: #74679e; --blue: #7daeff;
+  --success: #8cd6ba; --danger: #ffb5bd; --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}

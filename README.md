@@ -1,4 +1,66 @@
-# Kartuli Caption Forge
+# CapForge
+
+## Studio v0.3.1 — preview release
+
+A new dockable **CEP panel** wraps the existing caption engine in a focused
+studio interface. It has a built-in animated caption screen, thirteen searchable
+styles, Georgian and English demonstrations, a timed-word editor, reusable saved
+looks, and guided provider setup. The canvas uses your imported or transcribed
+words and their actual timestamps; final text metrics/effects render in AE.
+
+Design preserves the original engine's full visual controls: recognizable
+effect names, a draggable Slide In direction dial, dolly/easing, font families
+and styles, flexible wrapping, boundary fitting, full shadows/outlines/boxes and
+seeded word-style shuffle. Controls are grouped into Motion, Typography, Layout,
+Finish and Style shuffle. Saved looks include every setting.
+
+**Start here:** double-click `CapForge Setup.exe` on Windows or `Install macOS.command`
+from the extracted package. The guided installer checks prerequisites, installs
+for your user and preserves existing keys/exports when updating. The launcher
+automatically prepares a private runtime; the wizard installs audio preparation
+and transcription support. **No separate Python installation, PATH edits or
+package manager required.** Internet is needed for first setup.
+
+Open **Window → Extensions → CapForge** after restarting AE.
+Explore the demo, or open **Setup** to start the local service and add a provider
+key. Select an AE composition before generating captions.
+
+v0.3.1 fixes engine loading inside AE by using Adobe’s extension path explicitly.
+Start service reconnects to an existing authenticated CapForge service instead
+of launching a second instance. A port used by another app gets a connection
+message rather than an instruction to reinstall.
+
+The service accepts both local origins used by Adobe CEP (`file://` and `null`),
+so the installed panel can connect without the erroneous “This service only
+accepts the installed CapForge panel” rejection. Private API requests still
+require the installation token; web origins remain blocked.
+
+- [First captions and troubleshooting](docs/QUICK_START.md)
+- [AI accounts, API keys and optional local setup](docs/AI_SETUP.md)
+- [Agent workspace and codebase map](agents/README.md)
+- [Add a removable title style](agents/ADD_TITLE.md)
+- [Commercial release checklist](docs/RELEASE.md)
+- Browser design demo: open `panel/index.html` locally; no install or API key needed.
+- Build a clean distribution: `python scripts/package_release.py`.
+- [Checks passed and remaining validation](docs/VALIDATION.md)
+
+**Release status:** the panel is an unsigned release candidate. The installer
+offers Adobe's per-user unsigned-extension mode for this preview. A commercial
+distribution needs signing, clean macOS/Windows installation testing and real AE
+playback validation. The manifest's host range is not a tested compatibility claim.
+
+**Local service:** API calls now require an installation token in
+`backend/.local-token` (generated on service startup). The panel reads it locally;
+it is never stored in browser settings. Transcription outputs are saved separately
+in `exports/runs/<run-id>/`, so later runs do not overwrite earlier transcripts.
+
+**Original ScriptUI panel:** remains in `ae/KartuliCaptionForge.jsx`, sharing the
+same renderer. Run it from the installed runtime or this checkout's `ae/` folder
+so it can read its sibling `backend/.local-token`. If you copy the panel elsewhere,
+set `KCF_BACKEND_ROOT` to your backend folder; moving the JSX alone no longer
+provides service authorization. Include the `lib/` and `titles/` folders.
+
+## Provider reference and original panel instructions
 
 **Word-timed animated captions for After Effects — built for Georgian (ქართული), works for English too.**
 
@@ -45,13 +107,18 @@ License: MIT. Contributions welcome — especially new animation presets
 
 ## 1. What to download
 
-### Required (all platforms)
+### Required for the desktop plugin
 
-| Thing | macOS | Windows | Linux |
-|---|---|---|---|
-| **Python 3.10+** | preinstalled / `brew install python` | [python.org](https://www.python.org/downloads/) — check "Add to PATH" | `sudo apt install python3 python3-venv` |
-| **ffmpeg** | `brew install ffmpeg` | `winget install ffmpeg` or [ffmpeg.org](https://ffmpeg.org/download.html) → add to PATH | `sudo apt install ffmpeg` |
-| **After Effects** | CC 2019+ | CC 2019+ | — |
+Install After Effects, extract the full package, then open **CapForge Setup.exe**
+or **Install macOS.command**. CapForge prepares its own runtime and audio tool.
+The launchers support 64-bit Windows and Intel/Apple Silicon Macs (macOS 11+).
+AE installation/display compatibility still needs validation before a commercial
+release. Linux is supported for a manually configured backend only.
+`Install Windows.cmd` is a fallback launcher if the native entry is unavailable.
+
+For source development or a Linux backend, use Python 3.10+ and install
+`backend/requirements.txt` in a virtual environment. Manual development commands
+below are optional and are not part of customer installation.
 
 ### Optional — free local transcription (no API key, offline)
 

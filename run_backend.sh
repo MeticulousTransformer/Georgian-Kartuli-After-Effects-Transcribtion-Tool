@@ -1,9 +1,13 @@
 #!/bin/bash
-# Kartuli Caption Forge — start backend (macOS / Linux)
+# CapForge — start backend (macOS / Linux)
+set -e
 cd "$(dirname "$0")"
-if [ ! -d ".venv" ]; then
-  echo "Creating Python venv..."
-  python3 -m venv .venv
-  ./.venv/bin/pip install -r backend/requirements.txt
+if [ ! -x ".venv/bin/python" ]; then
+  echo "CapForge setup needs repair. Open Install macOS.command again."
+  exit 1
 fi
-exec ./.venv/bin/python backend/app.py
+if ! ./.venv/bin/python -c 'import fastapi, uvicorn, pydantic, requests, imageio_ffmpeg' >/dev/null 2>&1; then
+  echo "CapForge setup needs repair. Open Install macOS.command again."
+  exit 1
+fi
+exec ./.venv/bin/python backend/start_service.py

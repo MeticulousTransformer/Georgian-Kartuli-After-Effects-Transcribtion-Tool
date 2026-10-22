@@ -39,6 +39,15 @@ function KCF_readFileUTF8(file) {
     return text;
 }
 
+function KCF_authToken() {
+    var root = typeof KCF_BACKEND_ROOT !== "undefined" ? KCF_BACKEND_ROOT : "";
+    if (!root) { return ""; }
+    var token = new File(root + "/.local-token");
+    if (!token.exists) { return ""; }
+    var value = KCF_readFileUTF8(token).replace(/\s/g, "");
+    return /^[a-f0-9]{64}$/.test(value) ? value : "";
+}
+
 /* ---- transport 1: curl ---- */
 function KCF_httpViaCurl(method, host, port, path, body) {
     var tmpDir = Folder.temp.fsName;
@@ -49,6 +58,7 @@ function KCF_httpViaCurl(method, host, port, path, body) {
 
     var cmd = 'curl -s -m 1800 -X ' + method +
         ' -H "Content-Type: application/json"' +
+        ' -H "X-KCF-Token: ' + KCF_authToken() + '"' +
         ' -o "' + outFile.fsName + '"' +
         ' -w "%{http_code}"' ;
     if (body) {
@@ -88,6 +98,7 @@ function KCF_httpViaSocket(method, host, port, path, body) {
         method + " " + path + " HTTP/1.1\r\n" +
         "Host: " + host + ":" + port + "\r\n" +
         "Content-Type: application/json\r\n" +
+        "X-KCF-Token: " + KCF_authToken() + "\r\n" +
         "Content-Length: " + bodyBytes.length + "\r\n" +
         "Accept: application/json\r\n" +
         "Connection: close\r\n" +

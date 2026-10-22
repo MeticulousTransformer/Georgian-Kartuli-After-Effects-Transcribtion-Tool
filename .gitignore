@@ -1,6 +1,11 @@
 # Secrets — never commit API keys
 backend/.env
 backend/config.env
+backend/.local-token
+backend/.env-*
+dist/
+/CapForge Setup.exe
+.studio-test/
 
 # Older nested project copy
 /Georgian-Kartuli-After-Effects-Transcribtion-Tool-kml/

@@ -202,7 +202,7 @@ var KCF_PRESETS = {
                 KCF_setKeys(box.property("Transform").property("Scale"),
                     [tStart, tStart + 0.08], [[85, 85], [100, 100]], false);
                 box.comment = JSON.stringify({
-                    tool: "Kartuli Caption Forge",
+                    tool: "CapForge",
                     captionId: caption.id, wordId: lo.word.id, box: true
                 });
                 box.moveAfter(layouts[0].layer);   // below all caption text
