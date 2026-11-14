@@ -67,7 +67,9 @@ jobs:
   macos:
     needs: test
     runs-on: macos-15
-    timeout-minutes: 20
+    timeout-minutes: 90
+    outputs:
+      notarized: ${{ steps.package.outputs.notarized }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -75,13 +77,43 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - name: Build universal native app and DMG
+      - name: Prepare Apple signing credentials
+        id: signing
+        env:
+          CAPFORGE_APPLE_CERTIFICATE_P12: ${{ secrets.CAPFORGE_APPLE_CERTIFICATE_P12 }}
+          CAPFORGE_APPLE_CERTIFICATE_PASSWORD: ${{ secrets.CAPFORGE_APPLE_CERTIFICATE_PASSWORD }}
+          CAPFORGE_APPLE_ID: ${{ secrets.CAPFORGE_APPLE_ID }}
+          CAPFORGE_APPLE_APP_PASSWORD: ${{ secrets.CAPFORGE_APPLE_APP_PASSWORD }}
+          CAPFORGE_APPLE_TEAM_ID: ${{ secrets.CAPFORGE_APPLE_TEAM_ID }}
+        run: bash scripts/prepare_macos_signing.sh
+      - name: Build and verify universal app, DMG and updates
+        id: package
+        env:
+          APPLE_SIGNING_CONFIGURED: ${{ steps.signing.outputs.configured }}
         run: |
           python scripts/package_release.py --source-only
-          python scripts/build_macos.py --archive dist/CapForge-0.3.3.zip
+          signing_args=()
+          if [[ "$APPLE_SIGNING_CONFIGURED" == true ]]; then
+            signing_args=(--sign-identity "$CAPFORGE_MACOS_SIGNING_IDENTITY" --sign-keychain "$CAPFORGE_SIGNING_KEYCHAIN" --notary-profile CapForgeNotary --notary-keychain "$CAPFORGE_SIGNING_KEYCHAIN")
+          fi
+          python scripts/build_macos.py --archive dist/CapForge-0.3.3.zip "${signing_args[@]}"
           python scripts/package_update.py --archive dist/CapForge-0.3.3.zip --native dist/CapForge.app --platform macos --output dist/public/CapForge-0.3.3-macOS.zip
           python scripts/package_update.py --archive dist/CapForge-0.3.3.zip --native dist/CapForge.app --platform macos --legacy --output dist/public/CapForge-0.3.3.zip
           cp dist/CapForge-0.3.3-macOS.dmg* dist/public/
+          echo "notarized=$APPLE_SIGNING_CONFIGURED" >> "$GITHUB_OUTPUT"
+      - name: Remove temporary signing keychain
+        if: always()
+        run: |
+          keychain="$RUNNER_TEMP/capforge-signing.keychain-db"
+          if [[ -f "$keychain" ]]; then security delete-keychain "$keychain"; fi
+      - name: Keep Apple submission diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: apple-notarization-diagnostics
+          path: dist/notarization/*.json
+          if-no-files-found: ignore
+          retention-days: 14
       - uses: actions/upload-artifact@v7
         with:
           name: capforge-macos
@@ -108,6 +140,8 @@ jobs:
           name: capforge-macos
           path: dist
       - name: Verify disk image and install its app
+        env:
+          APPLE_NOTARIZED: ${{ needs.macos.outputs.notarized }}
         run: |
           cd dist
           shasum -a 256 -c CapForge-0.3.3-macOS.dmg.sha256
@@ -117,11 +151,15 @@ jobs:
           hdiutil attach dist/CapForge-0.3.3-macOS.dmg -nobrowse -readonly -mountpoint "$mount"
           trap 'hdiutil detach "$mount"' EXIT
           codesign --verify --deep --strict "$mount/CapForge.app"
+          if [[ "$APPLE_NOTARIZED" == true ]]; then
+            python scripts/check_notarized_updates.py --macos-archive dist/CapForge-0.3.3-macOS.zip --legacy-archive dist/CapForge-0.3.3.zip
+            PYTHONPATH=scripts python -c 'import sys; from pathlib import Path; from notarize_macos import verify_distribution; verify_distribution(Path(sys.argv[1]), Path(sys.argv[2]))' "$mount/CapForge.app" dist/CapForge-0.3.3-macOS.dmg
+          fi
           python scripts/check_native_install.py --platform macos --installer "$mount/CapForge.app/Contents/MacOS/CapForge"
 
   release:
-    needs: [windows, verify_macos]
-    if: github.ref == 'refs/heads/kml'
+    needs: [windows, macos, verify_macos]
+    if: github.ref == 'refs/heads/kml' && needs.macos.outputs.notarized == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -150,7 +188,7 @@ jobs:
 
           The GitHub repository is now **MeticulousTransformer/CapForge**. If you downloaded an installer before this rename, download the current DMG or EXE once so its updater uses the new address. Your keys and exports are preserved. [Update guide](https://github.com/MeticulousTransformer/CapForge/blob/kml/docs/UPDATES.md).
 
-          This preview is not Developer-ID notarized or Windows code-signed. OS trust warnings can appear. Adobe unsigned-extension mode is an explicit preview option. See your OS guide.
+          The Mac app and DMG are Developer ID signed and Apple notarized, with approval tickets included in the DMG and update downloads. macOS can still show its normal first-open confirmation. This approval covers the native app and disk image; the separately downloaded Python and FFmpeg runtime is outside that notarization submission. Windows publisher signing and Adobe extension signing remain pending; see your OS guide.
 
           Packaged installation passed on Windows, Apple Silicon and Intel Mac. Real AE compatibility and paid transcription should be checked on your own clips.
 

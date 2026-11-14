@@ -35,7 +35,11 @@ keys, exports, saved looks, and owned installation locations.
 Pushing to `kml` starts `.github/workflows/release.yml`. Both native builds use
 the same source commit and version. Publishing requires packaged installation
 checks on Windows, Apple Silicon Mac, and Intel Mac. Both public downloads are
-published together after those gates pass. An older workflow cannot supersede
+published together after those gates pass. New public releases also require
+Apple notarization and Gatekeeper acceptance of the final DMG and update apps.
+Without Apple credentials, CI builds preview artifacts but skips publication.
+Follow [Mac signing setup](MAC_SIGNING.md) to configure the publisher account.
+An older workflow cannot supersede
 a newer `kml` commit. Check the workflow and release itself to establish that a
 particular build passed; `VALIDATION.md` records separate historical evidence.
 
@@ -45,11 +49,17 @@ The download page directs new users to the DMG or EXE.
 
 ## Preview signing and remaining acceptance
 
-This preview has no Apple Developer ID or Windows publisher certificate. The
+The published `dcaf15d` preview has no Apple Developer ID or Windows publisher certificate. The
 Mac app uses an ad-hoc signature and is **not Apple notarized**. Windows may show
 an unknown-publisher warning. Native packaging does not remove those warnings.
 The editor guides explain the OS-specific prompts without installing certificates
 or disabling protection globally.
+
+The new workflow can sign and notarize the native Mac app and DMG once publisher
+credentials are configured. It requires Apple's `Accepted` response and verifies
+attached tickets after packaging. This infrastructure is not evidence of an
+approved build. Separately downloaded Python/FFmpeg runtimes remain outside the
+native app's notarization; see the scope and desktop checks in [Mac signing](MAC_SIGNING.md).
 
 The Adobe panel is also unsigned. Setup exposes an explicit unsigned-extension
 option; enabling it permits all unsigned Adobe panels for that user. A production

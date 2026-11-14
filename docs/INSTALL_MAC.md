@@ -24,8 +24,11 @@ needed. After Effects itself must already be installed.
 
 ## If macOS blocks opening the app
 
-This preview is not Apple notarized or signed with an identified developer's
+The published `dcaf15d` preview is not Apple notarized or signed with an identified developer's
 certificate. Its local ad-hoc signature does not remove Gatekeeper warnings.
+Check your download's release notes for its signing status. Future releases must
+pass the [Mac signing and notarization workflow](MAC_SIGNING.md); that work does
+not approve an older copy already on your Mac.
 
 If you trust the official download, first try opening CapForge. Then go to
 **System Settings → Privacy & Security → Open Anyway** for CapForge and confirm

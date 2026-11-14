@@ -3,6 +3,10 @@ backend/.env
 backend/config.env
 backend/.local-token
 backend/.env-*
+# Apple signing exports belong outside the checkout.
+*.p12
+*.p8
+*.keychain-db
 dist/
 /CapForge Setup.exe
 .studio-test/

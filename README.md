@@ -32,9 +32,13 @@ Save your project and close AE during setup. Then open
 **Window → Extensions → CapForge** (or **Extensions (Legacy)**). Try the demo,
 or connect one transcription provider in Setup and choose a short clip.
 
-This preview is not Apple notarized or Windows code-signed. OS trust warnings
+The published `dcaf15d` preview is not Apple notarized or Windows code-signed. OS trust warnings
 can appear; read your platform guide. Adobe's unsigned-extension option is
 separate and explicitly shown in Setup.
+
+New public releases require Apple signing, notarization and final Gatekeeper
+checks. Publisher credentials still need to be configured; the current download
+remains a preview. See [Mac signing setup](docs/MAC_SIGNING.md).
 
 **Updates:** open **Setup → Check for updates → Update**. CapForge chooses and
 verifies the package for your OS and opens native Setup. Save and close AE before
@@ -58,7 +62,8 @@ require the installation token; web origins remain blocked.
 - [Fresh review: bugs, causes and programming lessons](docs/BUGS_AND_LESSONS.md)
 - [Current review evidence and remaining acceptance work](docs/REVIEW_2026-11-12.md)
 
-**Release status:** this package is unsigned. Setup offers Adobe's
+**Release status:** check the download's release notes for its Mac signing status.
+The Windows installer and Adobe panel remain unsigned. Setup offers Adobe's
 per-user unsigned-extension mode. Local validation covers Apple Silicon Mac
 installation and AE 26.5 generation; the automated release workflow also requires
 Windows and Intel Mac installation checks. Signing and broader AE-version

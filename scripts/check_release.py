@@ -113,7 +113,7 @@ def main() -> None:
     if sys.platform == "win32":
         run(["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "installer/tests/test_runtime_windows.ps1"])
     else:
-        for file in ("Install macOS.command", "installer/bootstrap_macos.sh", "run_backend.sh"):
+        for file in ("Install macOS.command", "installer/bootstrap_macos.sh", "run_backend.sh", "scripts/prepare_macos_signing.sh"):
             run(["/bin/bash", "-n", file])
     if args.package:
         run([sys.executable, "scripts/package_release.py"])

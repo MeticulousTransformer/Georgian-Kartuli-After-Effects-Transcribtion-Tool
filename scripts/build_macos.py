@@ -19,6 +19,8 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+import notarize_macos
+
 ROOT = Path(__file__).resolve().parents[1]
 NATIVE = ROOT / "installer/macos"
 BUNDLE_ID = "com.capforge.app"
@@ -106,7 +108,8 @@ def run(*arguments: str | Path) -> None:
     subprocess.run([str(value) for value in arguments], check=True)
 
 
-def build_app(archive: Path, output: Path, *, sign_identity: str = "-") -> tuple[Path, dict]:
+def build_app(archive: Path, output: Path, *, sign_identity: str = "-",
+              sign_keychain: Path | None = None) -> tuple[Path, dict]:
     if sys.platform != "darwin":
         raise RuntimeError("Build the Mac app on macOS with Apple's Command Line Tools.")
     output.mkdir(parents=True, exist_ok=True)
@@ -137,7 +140,9 @@ def build_app(archive: Path, output: Path, *, sign_identity: str = "-") -> tuple
         if sign_identity == "-":
             run("/usr/bin/codesign", "--force", "--sign", "-", "--timestamp=none", app)
         else:
-            run("/usr/bin/codesign", "--force", "--sign", sign_identity, "--options", "runtime", "--timestamp", app)
+            keychain = ("--keychain", sign_keychain) if sign_keychain is not None else ()
+            run("/usr/bin/codesign", "--force", "--sign", sign_identity, *keychain,
+                "--options", "runtime", "--timestamp", app)
         run("/usr/bin/codesign", "--verify", "--deep", "--strict", app)
         run(executable, "--dry-run")
         destination = output / "CapForge.app"
@@ -152,6 +157,9 @@ def build_app(archive: Path, output: Path, *, sign_identity: str = "-") -> tuple
 
 def build_dmg(app: Path, output: Path, version: str) -> Path:
     destination = output / f"CapForge-{version}-macOS.dmg"
+    # Signing and stapling change bytes. Never leave an earlier checksum beside
+    # an image being rebuilt; callers write it only after all final checks.
+    destination.with_suffix(".dmg.sha256").unlink(missing_ok=True)
     with tempfile.TemporaryDirectory(prefix=".macos-dmg-", dir=output) as temporary:
         stage = Path(temporary)
         # ditto preserves the bundle's exact resource bytes and file modes.
@@ -159,9 +167,45 @@ def build_dmg(app: Path, output: Path, version: str) -> Path:
         (stage / "Applications").symlink_to("/Applications", target_is_directory=True)
         run("/usr/bin/hdiutil", "create", "-volname", "CapForge", "-srcfolder", stage,
             "-format", "UDZO", "-fs", "HFS+", "-ov", destination)
-    destination.with_suffix(".dmg.sha256").write_text(
-        hashlib.sha256(destination.read_bytes()).hexdigest() + "  " + destination.name + "\n", encoding="utf-8")
     return destination
+
+
+def build_distribution(archive: Path, output: Path, *, sign_identity: str = "-",
+                       sign_keychain: Path | None = None, notary_profile: str | None = None,
+                       notary_keychain: Path | None = None, skip_dmg: bool = False) -> tuple[Path, Path | None]:
+    if notary_profile is not None and (not notary_profile.strip() or sign_identity.strip() in {"", "-"}):
+        raise ValueError("Notarization requires a Developer ID Application identity and a Keychain profile; ad-hoc signing cannot be notarized.")
+    if notary_keychain is not None and notary_profile is None:
+        raise ValueError("--notary-keychain requires --notary-profile.")
+    app, identity = build_app(archive, output, sign_identity=sign_identity, sign_keychain=sign_keychain)
+    dmg = None
+    diagnostics = output / "notarization"
+    if notary_profile is not None:
+        notarize_macos.verify_developer_id(app)
+        # This archive is only a notary transport. The updater ZIP is built later
+        # from the app AFTER its ticket has been attached.
+        with tempfile.TemporaryDirectory(prefix=".macos-notary-", dir=output) as temporary:
+            archive = Path(temporary) / "CapForge.zip"
+            run("/usr/bin/ditto", "-c", "-k", "--keepParent", app, archive)
+            notarize_macos.submit(archive, profile=notary_profile, keychain=notary_keychain,
+                                 diagnostics=diagnostics, label="app")
+        notarize_macos.staple(app)
+    if not skip_dmg:
+        dmg = build_dmg(app, output, identity["version"])
+        if notary_profile is not None:
+            keychain = ("--keychain", sign_keychain) if sign_keychain is not None else ()
+            run("/usr/bin/codesign", "--force", "--sign", sign_identity, *keychain,
+                "--identifier", BUNDLE_ID + ".dmg", "--timestamp", dmg)
+            notarize_macos.verify_developer_id(dmg)
+            notarize_macos.submit(dmg, profile=notary_profile, keychain=notary_keychain,
+                                 diagnostics=diagnostics, label="dmg")
+            notarize_macos.staple(dmg)
+    if notary_profile is not None:
+        notarize_macos.verify_distribution(app, dmg)
+    if dmg is not None:
+        dmg.with_suffix(".dmg.sha256").write_text(
+            hashlib.sha256(dmg.read_bytes()).hexdigest() + "  " + dmg.name + "\n", encoding="utf-8")
+    return app, dmg
 
 
 def main() -> None:
@@ -170,13 +214,23 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, default=ROOT / "dist")
     parser.add_argument("--skip-dmg", action="store_true", help="Compile and verify the .app only")
     parser.add_argument("--sign-identity", default=os.environ.get("CAPFORGE_MACOS_SIGNING_IDENTITY", "-"), help="Developer ID identity; defaults to ad-hoc preview signing")
+    parser.add_argument("--sign-keychain", type=Path, help="Keychain containing the signing certificate and private key")
+    parser.add_argument("--notary-profile", help="Existing notarytool Keychain profile; enables required notarization")
+    parser.add_argument("--notary-keychain", type=Path, help="Keychain containing the notarytool profile")
     args = parser.parse_args()
-    app, identity = build_app(args.archive.resolve(), args.output_dir.resolve(), sign_identity=args.sign_identity)
+    app, dmg = build_distribution(args.archive.resolve(), args.output_dir.resolve(),
+                                  sign_identity=args.sign_identity, sign_keychain=args.sign_keychain,
+                                  notary_profile=args.notary_profile, notary_keychain=args.notary_keychain,
+                                  skip_dmg=args.skip_dmg)
     print("Created " + str(app), flush=True)
-    if not args.skip_dmg:
-        print("Created " + str(build_dmg(app, args.output_dir.resolve(), identity["version"])), flush=True)
+    if dmg is not None:
+        print("Created " + str(dmg), flush=True)
     if args.sign_identity == "-":
         print("Preview signing: ad-hoc. This app is not Apple notarized.", flush=True)
+    elif args.notary_profile is None:
+        print("Signed only. This app has not been Apple notarized by this build.", flush=True)
+    else:
+        print("Apple notarization, stapled tickets, and Gatekeeper checks passed.", flush=True)
 
 
 if __name__ == "__main__":

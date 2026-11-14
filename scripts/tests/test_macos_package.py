@@ -13,6 +13,7 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
 SPEC = importlib.util.spec_from_file_location("build_macos", ROOT / "scripts/build_macos.py")
 package = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(package)

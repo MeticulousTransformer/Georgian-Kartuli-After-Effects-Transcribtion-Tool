@@ -385,3 +385,41 @@ Read [Microsoft's explanation of module search paths](https://learn.microsoft.co
 The lesson: arguments, environment variables, input/output handles, and working
 directory are all inputs to a program. A test of the real executable can reveal
 problems that a direct call to one function cannot.
+
+## 16. A valid signature can still be untrusted
+
+The Mac app passed `codesign --verify`, but macOS still said Apple could not
+verify it. These results answered different questions. The ad-hoc signature
+checked whether the app's signed contents had changed. It did not identify a
+publisher that Apple trusted. Gatekeeper's separate assessment rejected it.
+The package tests were useful, but they had not tested that missing requirement.
+
+Three steps now have separate jobs. **Developer ID signing** connects the app
+to its publisher. **Notarization** submits the signed software to Apple's
+automated checks. **Stapling** attaches Apple's approval ticket so it travels
+with the download. Uploading successfully is not approval: the build must wait
+for the response `Accepted`. Rejection, timeout and incomplete responses all
+stop publication.
+
+Order matters because signatures and checksums describe particular bytes:
+
+1. Sign the app with its final contents.
+2. Submit it, wait for approval, and staple its ticket.
+3. Put that app in the DMG, then sign, notarize and staple the DMG.
+4. Build update ZIPs from the stapled app and calculate final checksums.
+5. Unpack the actual downloads and check them again.
+
+Checking only the DMG would miss the app delivered by the updater. Calculating
+the checksum before stapling would describe an earlier file. Each route a user
+takes needs to deliver the same verified app.
+
+There is another boundary: this app downloads Python and FFmpeg during setup.
+An approval ticket for the launcher does not automatically cover those later
+downloads. They need their own distribution checks. The lesson is to describe
+exactly what a test proves, then follow the user's whole journey to find what it
+does not prove yet.
+
+The code for this flow is ready to test with a real Developer ID identity;
+mocked tests cannot replace Apple's acceptance. Account setup and final desktop
+checks are documented in [Mac signing](MAC_SIGNING.md). Normal first-open
+confirmation can remain even after the blocking trust warning is resolved.

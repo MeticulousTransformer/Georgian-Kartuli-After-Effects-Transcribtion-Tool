@@ -103,6 +103,6 @@ Run the checks against the new lock before pushing. Core API providers are
 included; Google and local Whisper adapters retain their documented optional
 SDK/model setup. Provider accounts and API credit remain the user's choice.
 
-This preview is not Apple notarized, Windows publisher-signed, or Adobe-signed.
+The published `dcaf15d` preview is not Apple notarized, Windows publisher-signed, or Adobe-signed. Check newer downloads’ release notes for Mac signing status; new public builds require the [notarization workflow](MAC_SIGNING.md).
 OS trust warnings and real AE playback acceptance are separate from automated
 package and installation checks.
